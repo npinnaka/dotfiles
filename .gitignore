@@ -1,0 +1,20 @@
+# IDEs and Editors
+.idea/
+.vscode/
+.zed/
+.vim/
+.nvim/
+
+# MacOS
+.DS_Store
+
+# Neovim / Vim
+*.swp
+*.swo
+.netrwhist
+undo/
+*~
+
+# AI Tools
+.junie/
+.claude/

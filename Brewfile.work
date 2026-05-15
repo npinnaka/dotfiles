@@ -1,0 +1,16 @@
+# Work specific dependencies
+
+cask "claude-code"
+cask "corretto@21"
+cask "pgadmin4"
+
+
+# Shell plugins
+brew "groovy"
+brew "jenv"
+brew "node"
+brew "nodenv"
+brew "prettier"
+brew "tsc"
+brew "vault"
+brew "yq"

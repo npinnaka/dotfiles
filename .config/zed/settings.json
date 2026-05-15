@@ -1,0 +1,21 @@
+{
+    "ui_font_family": "JetBrains Mono",
+    "ui_font_size": 16,
+    "buffer_font_family": "JetBrains Mono",
+    "buffer_font_size": 13,
+    "theme": "One Dark",
+    "base_keymap": "JetBrains",
+    "format_on_save": "on",
+    "languages": {
+        "Go": {
+            "format_on_save": "on",
+            "formatter": {
+                "external": {
+                    "command": "gofmt",
+                    "arguments": []
+                }
+            }
+        }
+    },
+    "vim_mode": false
+}

@@ -1,0 +1,68 @@
+# .zshrc snippets for Ghostty and Homebrew tools
+
+# Homebrew setup and Path
+if [[ -f /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -f /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+if command -v brew &> /dev/null; then
+  BREW_PREFIX=$(brew --prefix)
+fi
+
+# Path
+export PATH="$HOME/bin:$HOME/.docker/bin:/usr/local/bin:/usr/local/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+# Set Homebrew Cask environment
+export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+
+#Set Anthropic TOKEN
+export ANTHROPIC_AUTH_TOKEN=""
+
+# zsh-autocomplete (must be near top)
+if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]]; then
+  source "$BREW_PREFIX/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+fi
+
+# zsh-autosuggestions
+if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
+  source "$BREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+
+# zsh-you-should-use
+if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh" ]]; then
+  source "$BREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh"
+fi
+
+# zoxide (smart cd)
+if command -v zoxide &> /dev/null; then
+  eval "$(zoxide init zsh)"
+fi
+
+# Starship prompt
+if command -v starship &> /dev/null; then
+  export STARSHIP_CONFIG="$HOME/.config/starship.toml"
+  eval "$(starship init zsh)"
+fi
+
+# Modern replacements
+alias ls="eza --icons"
+alias ll="eza --icons -la"
+alias lt="eza --icons --tree --level=2"
+alias cat="bat"
+
+# git-delta (handled via git config, but good to have)
+if command -v delta &> /dev/null; then
+  export GIT_PAGER="delta"
+fi
+
+# zsh-syntax-highlighting (must be last)
+if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+  source "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+
+# Python Virtual Environment
+if [[ -d "$HOME/.venv" && -f "$HOME/.venv/bin/activate" ]]; then
+  source "$HOME/.venv/bin/activate"
+fi

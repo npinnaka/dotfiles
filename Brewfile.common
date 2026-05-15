@@ -1,0 +1,41 @@
+# Common Brewfile shared across all environments
+
+
+# Terminal
+cask "bruno"
+cask "docker-desktop"
+cask "ghostty"
+cask "github"
+cask "jetbrains-toolbox"
+cask "visual-studio-code"
+cask "zed"
+
+# Fonts
+cask "font-jetbrains-mono-nerd-font"
+
+# Shell plugins
+brew "awscli"
+brew "go"
+brew "jq"
+brew "opentofu"
+brew "protobuf"
+brew "tree"
+brew "zsh-autocomplete"
+brew "zsh-autosuggestions"
+brew "zsh-syntax-highlighting"
+brew "zsh-you-should-use"
+
+# Prompt
+brew "starship"
+
+# Tools
+brew "bat"
+brew "btop"
+brew "dust"
+brew "eza"
+brew "fzf"
+brew "git-delta"
+brew "lazygit"
+brew "ripgrep"
+brew "yazi"
+brew "zoxide"

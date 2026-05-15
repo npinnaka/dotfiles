@@ -1,0 +1,43 @@
+# Ghostty Configuration
+
+# Theme — auto switches with macOS light/dark mode
+theme = light:Catppuccin Latte,dark:Catppuccin Mocha
+
+# Font
+font-family = "JetBrains Mono"
+font-size = 13
+
+# Window
+window-save-state = always
+background-opacity = 0.9
+background-blur-radius = 20
+window-padding-x = 10
+window-padding-y = 8
+macos-titlebar-style = transparent
+
+# Cursor
+cursor-style = block
+cursor-style-blink = true
+
+# Mouse
+mouse-hide-while-typing = true
+cursor-click-to-move = true
+
+# Quick terminal (Ctrl+` from anywhere)
+quick-terminal-position = top
+quick-terminal-animation-duration = 0.15
+keybind = global:ctrl+grave_accent=toggle_quick_terminal
+
+# Shell integration
+shell-integration-features = cursor,sudo,title
+
+# Keybindings for Home and End keys
+# Send physical Home/End escape sequences to the terminal
+keybind = home=text:\x1b[H
+keybind = end=text:\x1b[F
+# Command variants for macOS-like behavior (optional, but often expected)
+keybind = cmd+left=text:\x1b[H
+keybind = cmd+right=text:\x1b[F
+
+# Copy on select
+copy-on-select = true

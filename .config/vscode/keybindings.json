@@ -1,0 +1,51 @@
+[
+    {
+        "key": "cmd+d",
+        "command": "editor.action.duplicateSelection",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "cmd+backspace",
+        "command": "editor.action.deleteLines",
+        "when": "textInputFocus && !editorReadonly"
+    },
+    {
+        "key": "cmd+/",
+        "command": "editor.action.commentLine",
+        "when": "editorTextFocus && !editorReadonly"
+    },
+    {
+        "key": "shift+cmd+enter",
+        "command": "editor.action.insertLineBefore",
+        "when": "editorTextFocus && !editorReadonly"
+    },
+    {
+        "key": "cmd+e",
+        "command": "workbench.action.quickOpen"
+    },
+    {
+        "key": "shift+cmd+f",
+        "command": "workbench.action.findInFiles"
+    },
+    {
+        "key": "shift shift",
+        "command": "workbench.action.quickOpen"
+    },
+    {
+        "key": "cmd+1",
+        "command": "workbench.action.focusSideBar",
+        "when": "explorerViewletVisible"
+    },
+    {
+        "key": "cmd+7",
+        "command": "outline.focus"
+    },
+    {
+        "key": "cmd+f12",
+        "command": "editor.action.showOutline"
+    },
+    {
+        "key": "alt+f12",
+        "command": "workbench.action.terminal.toggleTerminal"
+    }
+]
