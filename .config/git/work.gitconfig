@@ -1,0 +1,13 @@
+# Work git identity
+# Included globally by setup.sh when running `./setup.sh work`.
+# Edit the values below to match your work account.
+
+[user]
+	name = Your Name
+	email = you@work.example
+	# Optional commit signing:
+	# signingkey = YOUR_GPG_OR_SSH_KEY
+
+# Uncomment to sign commits by default for this profile:
+# [commit]
+# 	gpgsign = true

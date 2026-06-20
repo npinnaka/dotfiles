@@ -9,6 +9,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
@@ -53,68 +54,79 @@ ensure_sudo() {
     fi
 }
 
-# Function to install items from a Brewfile with progress
-install_brew_items() {
-    local file=$1
-    if [ ! -f "$file" ]; then return; fi
-
-    ensure_sudo
-
-    # Count total items for progress bar
-    local total_items
-    total_items=$(grep -cE "^(tap|brew|cask) " "$file" || true)
-    local current_item=0
-
-    printf "    ${CYAN}Processing $(basename "$file")...${NC}\n"
-
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Skip comments and empty lines
-        [[ "$line" =~ ^#.*$ ]] && continue
-        [[ -z "$line" ]] && continue
-
-        if [[ "$line" =~ ^tap[[:space:]]+[\"\']?([^\"\'[:space:]]+)[\"\']?(.*) ]]; then
-            local tap="${BASH_REMATCH[1]}"
-            local args="${BASH_REMATCH[2]}"
-            current_item=$((current_item + 1))
-            draw_progress_bar $current_item $total_items "Tapping $tap..."
-            if brew tap $tap $args >> "$LOG_FILE" 2>&1; then
-                INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "tap: $tap")
-            else
-                printf "\n    ${RED}[ERROR] Failed to tap $tap. Check $LOG_FILE${NC}\n"
-            fi
-        elif [[ "$line" =~ ^brew[[:space:]]+[\"\']?([^\"\'[:space:]]+)[\"\']?(.*) ]]; then
-            local formula="${BASH_REMATCH[1]}"
-            local args="${BASH_REMATCH[2]}"
-            current_item=$((current_item + 1))
-            draw_progress_bar $current_item $total_items "Installing $formula..."
-            if brew install $formula $args >> "$LOG_FILE" 2>&1; then
-                INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "brew: $formula")
-            else
-                printf "\n    ${RED}[ERROR] Failed to install $formula. Check $LOG_FILE${NC}\n"
-            fi
-        elif [[ "$line" =~ ^cask[[:space:]]+[\"\']?([^\"\']+)[\"\']?(.*) ]]; then
-            local cask="${BASH_REMATCH[1]}"
-            local args="${BASH_REMATCH[2]}"
-            current_item=$((current_item + 1))
-            draw_progress_bar $current_item $total_items "Installing $cask..."
-            if brew install --cask "$cask" $args >> "$LOG_FILE" 2>&1; then
-                INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "cask: $cask")
-            else
-                printf "\n    ${RED}[ERROR] Failed to install $cask. Check $LOG_FILE${NC}\n"
-            fi
-        fi
-    done < "$file"
-
-    printf "\n    ${GREEN}[OK] Completed $(basename "$file")${NC}\n"
+# Wrapper that echoes mutating commands in --dry-run mode instead of running them
+run() {
+    if [ -n "$DRY_RUN" ]; then
+        printf "    ${YELLOW}DRY-RUN:${NC} %s\n" "$*"
+    else
+        "$@"
+    fi
 }
 
-USAGE="Usage: ./setup.sh [home|work]"
+# Idempotent symlink helper: backs up an existing non-symlink target before linking.
+# Usage: link_config <repo_src> <system_dst>
+link_config() {
+    local src=$1 dst=$2
+    if [ -e "$dst" ] && [ ! -L "$dst" ]; then
+        local backup="$dst.bak.$(date +%s)"
+        printf "    ${YELLOW}Backing up existing $dst -> $backup${NC}\n"
+        run mv "$dst" "$backup"
+    fi
+    run ln -sfn "$src" "$dst"
+    printf "    ${GREEN}[OK] Linked $dst${NC}\n"
+}
+
+# Install every entry of a Brewfile natively via `brew bundle`.
+install_brewfile() {
+    local file=$1
+    if [ ! -f "$file" ]; then
+        printf "    ${YELLOW}$(basename "$file") not found. Skipping.${NC}\n"
+        return
+    fi
+    ensure_sudo
+    printf "    ${CYAN}Running brew bundle for $(basename "$file")...${NC}\n"
+    if run brew bundle --file="$file" --no-lock >> "$LOG_FILE" 2>&1; then
+        INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "brewfile: $(basename "$file")")
+        printf "    ${GREEN}[OK] Completed $(basename "$file")${NC}\n"
+    else
+        printf "    ${RED}[ERROR] brew bundle reported issues for $(basename "$file"). Check $LOG_FILE${NC}\n"
+    fi
+}
+
+USAGE="Usage: ./setup.sh <home|work> [--dry-run] [-h|--help]"
+
+print_help() {
+    printf "%s\n\n" "$USAGE"
+    printf "Provision this machine from the dotfiles repo using Homebrew as the\n"
+    printf "single source of truth.\n\n"
+    printf "Arguments:\n"
+    printf "  home          Use Brewfile.common + Brewfile.home and the home git identity.\n"
+    printf "  work          Use Brewfile.common + Brewfile.work and the work git identity.\n\n"
+    printf "Options:\n"
+    printf "  --dry-run     Print every package, symlink, and git action without changing anything.\n"
+    printf "  -h, --help    Show this help message and exit.\n\n"
+    printf "Examples:\n"
+    printf "  ./setup.sh home\n"
+    printf "  ./setup.sh work --dry-run\n"
+}
 
 # Main execution logic
 main() {
-    local BUNDLE_TYPE=$1
     local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local LOG_FILE="$HOME/.dotfiles_setup.log"
+
+    # Parse arguments: a positional profile (home|work) and an optional --dry-run flag
+    local BUNDLE_TYPE=""
+    DRY_RUN=""
+    local arg
+    for arg in "$@"; do
+        case "$arg" in
+            -h|--help) print_help; exit 0 ;;
+            --dry-run) DRY_RUN=1 ;;
+            home|work) BUNDLE_TYPE="$arg" ;;
+            *) ;;
+        esac
+    done
 
     # Initialize log file
     printf "Dotfiles setup started at $(date)\n" > "$LOG_FILE"
@@ -134,9 +146,17 @@ main() {
         exit $?
     fi
 
-    if [ -z "$1" ]; then
+    if [ -z "$BUNDLE_TYPE" ]; then
         printf "${YELLOW}$USAGE${NC}\n"
         exit 1
+    fi
+
+    if [ -n "$DRY_RUN" ]; then
+        printf "${BOLD}${YELLOW}[DRY-RUN] No changes will be made.${NC}\n\n"
+    else
+        # Acquire sudo once up front; a keep-alive then refreshes the timestamp
+        # for the rest of the run so the password is never requested again.
+        ensure_sudo
     fi
 
     local BREWFILE="$SCRIPT_DIR/Brewfile.$BUNDLE_TYPE"
@@ -149,7 +169,7 @@ main() {
         exit 1
     fi
 
-    local TOTAL_STEPS=9
+    local TOTAL_STEPS=8
     local CURRENT_STEP=0
 
     printf "${BOLD}${BLUE}Starting dotfiles setup for ${CYAN}$BUNDLE_TYPE${BLUE}...${NC}\n\n"
@@ -195,12 +215,8 @@ main() {
     if [ -n "$BREW_PATH" ] && command -v brew >/dev/null 2>&1; then
         # Ensure shellenv is applied if we found it via path but it's not in current PATH
         eval "$($BREW_PATH shellenv)"
-        if [ -f "$SCRIPT_DIR/Brewfile.common" ]; then
-            install_brew_items "$SCRIPT_DIR/Brewfile.common"
-        else
-            printf "    ${YELLOW}Brewfile.common not found. Skipping.${NC}\n"
-        fi
-        install_brew_items "$BREWFILE"
+        install_brewfile "$SCRIPT_DIR/Brewfile.common"
+        install_brewfile "$BREWFILE"
     else
         printf "    ${RED}Homebrew installation failed or was not found. Skipping package installation.${NC}\n"
     fi
@@ -211,42 +227,18 @@ main() {
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Creating configuration directories...${NC}\n"
     mkdir -p "$HOME/.config"
     mkdir -p "$HOME/Library/Application Support/com.mitchellh.ghostty"
-    mkdir -p "$HOME/Library/Application Support/Code/User"
     mkdir -p "$HOME/.config/zed"
 
     # Step 3: Symbolic links
     CURRENT_STEP=$((CURRENT_STEP + 1))
     draw_progress_bar 1 1 "Creating symbolic links..."
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Creating symbolic links...${NC}\n"
-    ln -sf "$SCRIPT_DIR/.config/ghostty/config" "$HOME/Library/Application Support/com.mitchellh.ghostty/config"
-    ln -sf "$SCRIPT_DIR/.config/starship.toml" "$HOME/.config/starship.toml"
-    ln -sf "$SCRIPT_DIR/.config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
-    ln -sf "$SCRIPT_DIR/.config/vscode/keybindings.json" "$HOME/Library/Application Support/Code/User/keybindings.json"
-    ln -sf "$SCRIPT_DIR/.config/zed/settings.json" "$HOME/.config/zed/settings.json"
-    ln -sf "$SCRIPT_DIR/.config/zed/keymap.json" "$HOME/.config/zed/keymap.json"
+    link_config "$SCRIPT_DIR/.config/ghostty/config" "$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+    link_config "$SCRIPT_DIR/.config/starship.toml" "$HOME/.config/starship.toml"
+    link_config "$SCRIPT_DIR/.config/zed/settings.json" "$HOME/.config/zed/settings.json"
+    link_config "$SCRIPT_DIR/.config/zed/keymap.json" "$HOME/.config/zed/keymap.json"
 
-    # Step 4: VS Code Extensions
-    CURRENT_STEP=$((CURRENT_STEP + 1))
-    printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Installing VS Code extensions...${NC}\n"
-    if command -v code >/dev/null 2>&1; then
-        local VS_EXTENSIONS=("golang.Go" "tomasvitorino.intellij-idea-keybindings" "anthropic.claude-code")
-        local total_ext=${#VS_EXTENSIONS[@]}
-        local current_ext=0
-        for ext in "${VS_EXTENSIONS[@]}"; do
-            current_ext=$((current_ext + 1))
-            draw_progress_bar $current_ext $total_ext "Installing VS Code extension: $ext..."
-            if code --install-extension "$ext" --force >> "$LOG_FILE" 2>&1; then
-                INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "vscode-ext: $ext")
-            else
-                printf "\n    ${RED}Failed to install VS Code extension: $ext. Check $LOG_FILE for details.${NC}\n" >> "$LOG_FILE"
-            fi
-        done
-        printf "\n    ${GREEN}[OK] VS Code extensions processed${NC}\n"
-    else
-        printf "    ${YELLOW}VS Code (code) not found. Skipping extensions.${NC}\n"
-    fi
-
-    # Step 5: IntelliJ IDEA Plugins
+    # Step 4: IntelliJ IDEA Plugins
     CURRENT_STEP=$((CURRENT_STEP + 1))
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Checking for IntelliJ IDEA plugins...${NC}\n"
     # Check common installation paths
@@ -286,7 +278,7 @@ main() {
         for plugin in "${IDEA_PLUGINS[@]}"; do
             current_idea=$((current_idea + 1))
             draw_progress_bar $current_idea $total_idea "Installing IntelliJ plugin: $plugin..."
-            if "$FOUND_IDEA" installPlugins "$plugin" >> "$LOG_FILE" 2>&1; then
+            if run "$FOUND_IDEA" installPlugins "$plugin" >> "$LOG_FILE" 2>&1; then
                 INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "intellij-plugin: $plugin")
             else
                 printf "\n    ${RED}Failed to install IntelliJ plugin: $plugin. Check $LOG_FILE for details.${NC}\n" >> "$LOG_FILE"
@@ -297,7 +289,7 @@ main() {
         printf "    ${YELLOW}IntelliJ IDEA not found yet. Use JetBrains Toolbox to install it, then rerun to install plugins.${NC}\n"
     fi
 
-    # Step 6: Backup .zshrc
+    # Step 5: Backup .zshrc
     CURRENT_STEP=$((CURRENT_STEP + 1))
     draw_progress_bar 1 1 "Handling .zshrc backup..."
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Handling .zshrc backup...${NC}\n"
@@ -305,7 +297,7 @@ main() {
     if [ -f "$ZSH_SNIPPET" ]; then
         if [ -f "$HOME/.zshrc" ]; then
             if [ ! -f "$HOME/.zshrc_pre_script_copy" ]; then
-                cp "$HOME/.zshrc" "$HOME/.zshrc_pre_script_copy"
+                run cp "$HOME/.zshrc" "$HOME/.zshrc_pre_script_copy"
                 printf "    ${GREEN}Backup created at ~/.zshrc_pre_script_copy${NC}\n"
             else
                 printf "    ${YELLOW}Backup already exists. Skipping.${NC}\n"
@@ -313,7 +305,7 @@ main() {
         fi
     fi
 
-    # Step 7: Update .zshrc
+    # Step 6: Update .zshrc
     CURRENT_STEP=$((CURRENT_STEP + 1))
     draw_progress_bar 1 1 "Updating ~/.zshrc..."
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Updating ~/.zshrc...${NC}\n"
@@ -321,22 +313,26 @@ main() {
         # Check if snippet content is already in .zshrc
         # We look for a unique comment from the snippet
         if ! grep -qF "# .zshrc snippets for Ghostty and Homebrew tools" ~/.zshrc 2>/dev/null; then
-            printf '\n# Added by dotfiles setup script\n' >> ~/.zshrc
-            cat "$ZSH_SNIPPET" >> ~/.zshrc
+            if [ -n "$DRY_RUN" ]; then
+                printf "    ${YELLOW}DRY-RUN:${NC} append %s to ~/.zshrc\n" "$ZSH_SNIPPET"
+            else
+                printf '\n# Added by dotfiles setup script\n' >> ~/.zshrc
+                cat "$ZSH_SNIPPET" >> ~/.zshrc
+            fi
             printf "    ${GREEN}[OK] Snippet content copied to ~/.zshrc successfully.${NC}\n"
         else
             printf "    ${CYAN}Snippet content already present in ~/.zshrc.${NC}\n"
         fi
     fi
 
-    # Step 8: Python Virtual Environment
+    # Step 7: Python Virtual Environment
     CURRENT_STEP=$((CURRENT_STEP + 1))
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Setting up Python virtual environment...${NC}\n"
     if command -v python3 >/dev/null 2>&1; then
         local VENV_PATH="$HOME/.venv"
         if [ ! -d "$VENV_PATH" ]; then
             draw_progress_bar 1 1 "Creating virtual environment at $VENV_PATH..."
-            if python3 -m venv "$VENV_PATH" >> "$LOG_FILE" 2>&1; then
+            if run python3 -m venv "$VENV_PATH" >> "$LOG_FILE" 2>&1; then
                 printf "\n    ${GREEN}[OK] Virtual environment created at $VENV_PATH${NC}\n"
                 INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "python-venv: $VENV_PATH")
             else
@@ -349,21 +345,30 @@ main() {
         printf "    ${YELLOW}python3 not found. Skipping virtual environment setup.${NC}\n"
     fi
 
-    # Step 9: Git Configuration
+    # Step 8: Git Configuration
     CURRENT_STEP=$((CURRENT_STEP + 1))
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Configuring Git...${NC}\n"
     draw_progress_bar 1 1 "Setting up .gitconfig..."
-    git config --global core.pager delta
-    git config --global interactive.diffFilter "delta --color-only"
-    git config --global delta.navigate true
-    git config --global delta.side-by-side true
-    git config --global merge.conflictstyle diff3
-    git config --global diff.colorMoved default
-    printf "\n    ${GREEN}[OK] Git configuration updated.${NC}\n"
+    run git config --global core.pager delta
+    run git config --global interactive.diffFilter "delta --color-only"
+    run git config --global delta.navigate true
+    run git config --global delta.side-by-side true
+    run git config --global merge.conflictstyle diff3
+    run git config --global diff.colorMoved default
+
+    # Per-profile git identity via an include.path (versioned, non-destructive)
+    local GIT_PROFILE="$SCRIPT_DIR/.config/git/$BUNDLE_TYPE.gitconfig"
+    if [ -f "$GIT_PROFILE" ]; then
+        run git config --global include.path "$GIT_PROFILE"
+        printf "\n    ${GREEN}[OK] Git identity included from $GIT_PROFILE${NC}\n"
+    else
+        printf "\n    ${YELLOW}No profile gitconfig at $GIT_PROFILE. Skipping identity.${NC}\n"
+    fi
+    printf "    ${GREEN}[OK] Git configuration updated.${NC}\n"
 
     if [ ${#INSTALLED_PACKAGES[@]} -gt 0 ]; then
         printf "\n${BOLD}${BLUE}Package Installation Summary:${NC}\n"
-        for section in tap brew cask vscode-ext intellij-plugin python-venv; do
+        for section in brewfile intellij-plugin python-venv; do
             local items=()
             for item in "${INSTALLED_PACKAGES[@]}"; do
                 [[ "${item%%:*}" == "$section" ]] && items=("${items[@]}" "$item")

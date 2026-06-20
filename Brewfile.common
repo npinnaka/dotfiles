@@ -1,25 +1,27 @@
 # Common Brewfile shared across all environments
+# Installed via `brew bundle` for both the home and work profiles.
 
-
-# Terminal
+# Apps (casks)
 cask "bruno"
 cask "docker-desktop"
 cask "ghostty"
 cask "github"
 cask "jetbrains-toolbox"
-cask "visual-studio-code"
 cask "zed"
 
 # Fonts
 cask "font-jetbrains-mono-nerd-font"
 
-# Shell plugins
-brew "awscli"
+# Languages & runtimes
 brew "go"
-brew "jq"
+brew "python"
+
+# Cloud / infra
+brew "awscli"
 brew "opentofu"
 brew "protobuf"
-brew "tree"
+
+# Shell plugins
 brew "zsh-autocomplete"
 brew "zsh-autosuggestions"
 brew "zsh-syntax-highlighting"
@@ -35,7 +37,9 @@ brew "dust"
 brew "eza"
 brew "fzf"
 brew "git-delta"
+brew "jq"
 brew "lazygit"
 brew "ripgrep"
+brew "tree"
 brew "yazi"
 brew "zoxide"

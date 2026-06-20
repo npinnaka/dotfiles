@@ -1,16 +1,20 @@
-# Work specific dependencies
+# Work-only dependencies (installed after Brewfile.common for the `work` profile)
 
+# Apps
 cask "claude-code"
 cask "corretto@21"
 cask "pgadmin4"
 
-
-# Shell plugins
+# JVM / build
 brew "groovy"
 brew "jenv"
+
+# Node / JS toolchain
 brew "node"
 brew "nodenv"
 brew "prettier"
 brew "tsc"
+
+# Infra / CLI
 brew "vault"
 brew "yq"

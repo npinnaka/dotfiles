@@ -13,9 +13,18 @@ Personal macOS dotfiles repository. The two entry-point scripts manage everythin
 ./setup.sh home
 ./setup.sh work
 
+# Preview all actions without changing anything
+./setup.sh home --dry-run
+
+# Show usage/help for either script
+./setup.sh --help
+./uninstall.sh --help
+
 # Fully revert — removes all Homebrew packages system-wide (destructive)
 ./uninstall.sh
 ```
+
+The positional `home`/`work` argument is the **profile**: it selects the layered Brewfile and the git identity that gets applied. `--dry-run` routes every mutating command through a `run()` wrapper that echoes instead of executing.
 
 Manual Homebrew-only install (skips symlinks and zsh setup):
 ```bash
@@ -30,19 +39,21 @@ brew bundle --file=Brewfile.home   # or Brewfile.work
 | File | Purpose |
 |---|---|
 | `Brewfile.common` | Shared across home and work |
-| `Brewfile.home` | Home-only (Chrome, Brave, Junie) |
+| `Brewfile.home` | Home-only (Chrome, Brave, Junie, Rectangle) |
 | `Brewfile.work` | Work-only (Corretto 21, pgAdmin4, vault, node, jenv, etc.) |
+
+Packages are installed natively with `brew bundle --file=...` — there is no custom parser.
 
 ### `setup.sh` flow (8 steps)
 
-1. Install Homebrew packages from `Brewfile.common` + the environment-specific Brewfile
-2. Create config directories (`~/.config`, Ghostty, VS Code, Zed)
-3. Symlink all configs from `.config/` to their app locations (see table below)
-4. Install VS Code extensions (`golang.Go`, `tomasvitorino.intellij-idea-keybindings`, `anthropic.claude-code`)
-5. Install IntelliJ plugins (`com.anthropic.claudecode`, `com.github.copilot`, `org.jetbrains.plugins.go`) via `idea installPlugins` (skipped if IDEA not found)
-6. Back up `~/.zshrc` to `~/.zshrc_pre_script_copy`
-7. Append `source <repo>/.config/zsh/snippet` to `~/.zshrc`
-8. Create a Python virtual environment at `~/.venv` (uses Python installed by AWS CLI)
+1. Install Homebrew packages, casks, and fonts via `brew bundle` (`Brewfile.common` + the profile Brewfile)
+2. Create config directories (`~/.config`, Ghostty, Zed)
+3. Symlink all configs from `.config/` to their app locations via `link_config` (backs up existing real files; see table below)
+4. Install IntelliJ plugins (`com.anthropic.claudecode`, `com.github.copilot`, `org.jetbrains.plugins.go`) via `idea installPlugins` (skipped if IDEA not found)
+5. Back up `~/.zshrc` to `~/.zshrc_pre_script_copy`
+6. Append `<repo>/.config/zsh/snippet` to `~/.zshrc` (guarded by a grep marker; idempotent)
+7. Create a Python virtual environment at `~/.venv` (uses Python installed via Homebrew)
+8. Configure Git: global delta settings + per-profile identity via `git config --global include.path .config/git/<profile>.gitconfig`
 
 ### Symlink map (created by `setup.sh`)
 
@@ -50,10 +61,10 @@ brew bundle --file=Brewfile.home   # or Brewfile.work
 |---|---|
 | `.config/ghostty/config` | `~/Library/Application Support/com.mitchellh.ghostty/config` |
 | `.config/starship.toml` | `~/.config/starship.toml` |
-| `.config/vscode/settings.json` | `~/Library/Application Support/Code/User/settings.json` |
-| `.config/vscode/keybindings.json` | `~/Library/Application Support/Code/User/keybindings.json` |
 | `.config/zed/settings.json` | `~/.config/zed/settings.json` |
 | `.config/zed/keymap.json` | `~/.config/zed/keymap.json` |
+
+Git identity files (`.config/git/home.gitconfig`, `.config/git/work.gitconfig`) are **not** symlinked; they are referenced via `include.path` so they stay versioned and editable in the repo.
 
 ### Development & Testing
 
@@ -75,6 +86,8 @@ sh -n uninstall.sh
 - **Error Handling**: Use `set -e` at the top of scripts.
 - **Logging**: Both `setup.sh` and `uninstall.sh` log detailed output to `~/.dotfiles_setup.log` and `~/.dotfiles_uninstall.log` respectively by re-executing the script and piping to `tee`.
 - **Feedback**: Use the `draw_progress_bar` function to provide visual feedback during long-running tasks.
+- **Dry-run safety**: Route every mutating command through the `run()` wrapper so `--dry-run` can preview it. Use `link_config <src> <dst>` for symlinks — it backs up non-symlink targets to `<dst>.bak.<timestamp>` and is safe to re-run.
+- **Git identity**: Apply per-profile identity with `git config --global include.path` (never clobber `user.*` directly); `uninstall.sh` unsets these includes on teardown.
 
 ### `.config/zsh/snippet`
 

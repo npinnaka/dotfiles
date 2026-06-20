@@ -12,7 +12,10 @@ if command -v brew &> /dev/null; then
 fi
 
 # Path
-export PATH="$HOME/bin:$HOME/.docker/bin:/usr/local/bin:/usr/local/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# Ensure Homebrew paths are prioritized by being at the beginning, 
+# but eval brew shellenv usually handles this. 
+# We explicitly put local and homebrew bins first.
+export PATH="$HOME/bin:$HOME/.docker/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Set Homebrew Cask environment
 export HOMEBREW_CASK_OPTS="--appdir=/Applications"

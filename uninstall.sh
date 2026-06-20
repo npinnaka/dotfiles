@@ -147,8 +147,29 @@ uninstall_homebrew_itself() {
     printf "    ${GREEN}[OK] Homebrew uninstalled.${NC}\n"
 }
 
+USAGE="Usage: ./uninstall.sh [-h|--help]"
+
+print_help() {
+    printf "%s\n\n" "$USAGE"
+    printf "Revert the dotfiles setup: restore ~/.zshrc, remove symlinks, and remove\n"
+    printf "the per-profile git identity includes. Optionally uninstalls all Homebrew\n"
+    printf "packages and Homebrew itself — each destructive action is confirmation-gated.\n\n"
+    printf "Options:\n"
+    printf "  -h, --help    Show this help message and exit.\n\n"
+    printf "Example:\n"
+    printf "  ./uninstall.sh\n"
+}
+
 # Main execution logic
 main() {
+    local arg
+    for arg in "$@"; do
+        case "$arg" in
+            -h|--help) print_help; exit 0 ;;
+            *) ;;
+        esac
+    done
+
     local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local LOG_FILE="$HOME/.dotfiles_uninstall.log"
 
@@ -173,7 +194,7 @@ main() {
 
     UNINSTALLED_PACKAGES=()
 
-    local TOTAL_STEPS=4
+    local TOTAL_STEPS=5
     local CURRENT_STEP=0
 
     # Step 1: Restore .zshrc
@@ -203,8 +224,6 @@ main() {
     local LINKS=(
         "$HOME/Library/Application Support/com.mitchellh.ghostty/config"
         "$HOME/.config/starship.toml"
-        "$HOME/Library/Application Support/Code/User/settings.json"
-        "$HOME/Library/Application Support/Code/User/keybindings.json"
         "$HOME/.config/zed/settings.json"
         "$HOME/.config/zed/keymap.json"
     )
@@ -226,7 +245,6 @@ main() {
     local DIRS=(
         "$HOME/Library/Application Support/com.mitchellh.ghostty"
         "$HOME/.config/zed"
-        "$HOME/Library/Application Support/Code/User"
     )
 
     for dir in "${DIRS[@]}"; do
@@ -239,12 +257,28 @@ main() {
         fi
     done
 
-    # Step 3: Homebrew uninstallation (packages)
+    # Step 3: Remove per-profile git identity includes
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    draw_progress_bar 1 1 "Removing git identity includes..."
+    printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Removing git identity includes...${NC}\n"
+    if command -v git >/dev/null 2>&1; then
+        local profile
+        for profile in home work; do
+            local GIT_PROFILE="$SCRIPT_DIR/.config/git/$profile.gitconfig"
+            # Remove the include.path entry if it points at this repo's profile gitconfig
+            git config --global --unset-all include.path "^$(printf '%s' "$GIT_PROFILE" | sed 's/[][\\.*^$/]/\\&/g')$" 2>/dev/null || true
+        done
+        printf "    ${GREEN}[OK] Removed profile git includes (if present).${NC}\n"
+    else
+        printf "    ${YELLOW}git not found. Skipping.${NC}\n"
+    fi
+
+    # Step 4: Homebrew uninstallation (packages)
     CURRENT_STEP=$((CURRENT_STEP + 1))
     printf "  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Uninstalling Homebrew dependencies...${NC}\n"
     uninstall_all_brew
 
-    # Step 4: Uninstall Homebrew itself
+    # Step 5: Uninstall Homebrew itself
     CURRENT_STEP=$((CURRENT_STEP + 1))
     printf "  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Uninstalling Homebrew itself...${NC}\n"
     uninstall_homebrew_itself

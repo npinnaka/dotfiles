@@ -1,6 +1,9 @@
-# Home specific dependencies
+# Home-only dependencies (installed after Brewfile.common for the `home` profile)
 
+# Browsers
 cask "brave-browser"
 cask "google-chrome"
+
+# Apps
 cask "junie"
 cask "rectangle"
