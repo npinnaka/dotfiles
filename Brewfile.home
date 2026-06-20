@@ -5,5 +5,7 @@ cask "brave-browser"
 cask "google-chrome"
 
 # Apps
-cask "junie"
+# Note: "junie" is not a Homebrew cask. JetBrains Junie ships as an IDE plugin
+# (installed via setup.sh's IntelliJ plugin step / JetBrains Toolbox), so it is
+# intentionally not listed here.
 cask "rectangle"

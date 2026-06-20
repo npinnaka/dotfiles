@@ -12,13 +12,19 @@ if command -v brew &> /dev/null; then
 fi
 
 # Path
-# Ensure Homebrew paths are prioritized by being at the beginning, 
-# but eval brew shellenv usually handles this. 
-# We explicitly put local and homebrew bins first.
-export PATH="$HOME/bin:$HOME/.docker/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# Ensure Homebrew paths are prioritized by being at the beginning,
+# but eval brew shellenv usually handles this.
+# We explicitly put user-local and homebrew bins first.
+#   $HOME/.local/bin : user-installed CLIs (pip --user, pipx, uv, npm --prefix, etc.)
+#   $HOME/bin        : personal scripts
+#   $HOME/.docker/bin: Docker Desktop CLI plugins
+#   $HOME/go/bin     : Go-installed binaries (go install ...)
+#   $HOME/.cargo/bin : Rust/Cargo-installed binaries
+export PATH="$HOME/.local/bin:$HOME/bin:$HOME/.docker/bin:$HOME/go/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Set Homebrew Cask environment
-export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+# Install casks into the user's ~/Applications so install/uninstall never needs sudo.
+export HOMEBREW_CASK_OPTS="--appdir=$HOME/Applications"
 
 #Set Anthropic TOKEN
 export ANTHROPIC_AUTH_TOKEN=""

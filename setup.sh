@@ -13,6 +13,12 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
+# Running output: print a timestamped line for every action so the user can
+# follow exactly what the script is doing in real time (also captured in the log).
+log() {
+    printf "${CYAN}[%s]${NC} %s\n" "$(date +%H:%M:%S)" "$*"
+}
+
 # Progress bar function
 # Arguments: current_step total_steps message
 draw_progress_bar() {
@@ -67,6 +73,7 @@ run() {
 # Usage: link_config <repo_src> <system_dst>
 link_config() {
     local src=$1 dst=$2
+    log "Linking $src -> $dst"
     if [ -e "$dst" ] && [ ! -L "$dst" ]; then
         local backup="$dst.bak.$(date +%s)"
         printf "    ${YELLOW}Backing up existing $dst -> $backup${NC}\n"
@@ -83,13 +90,53 @@ install_brewfile() {
         printf "    ${YELLOW}$(basename "$file") not found. Skipping.${NC}\n"
         return
     fi
-    ensure_sudo
-    printf "    ${CYAN}Running brew bundle for $(basename "$file")...${NC}\n"
-    if run brew bundle --file="$file" --no-lock >> "$LOG_FILE" 2>&1; then
-        INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "brewfile: $(basename "$file")")
-        printf "    ${GREEN}[OK] Completed $(basename "$file")${NC}\n"
+    # Route GUI casks into the user's ~/Applications so installs never require sudo
+    # (and a later uninstall won't prompt for a password per app).
+    mkdir -p "$HOME/Applications"
+    export HOMEBREW_CASK_OPTS="--appdir=$HOME/Applications"
+
+    # Resolve the brew binary by absolute path and re-apply its shellenv for
+    # every bundle call. Relying on `brew` being on PATH is fragile: a prior
+    # `brew bundle` (or a partially failed install) can leave the current shell
+    # without `brew` on PATH, which produced "brew: command not found" on the
+    # second Brewfile. Looking it up here makes each call self-sufficient.
+    local BREW_BIN
+    BREW_BIN=$(command -v brew 2>/dev/null || true)
+    if [ -z "$BREW_BIN" ]; then
+        local candidate
+        for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+            if [ -x "$candidate" ]; then
+                BREW_BIN="$candidate"
+                break
+            fi
+        done
+    fi
+    if [ -z "$BREW_BIN" ]; then
+        log "[ERROR] Homebrew not found; cannot install $(basename "$file")."
+        return
+    fi
+    # Re-apply shellenv so dependent tools (and brew's own subcommands) are on PATH.
+    eval "$("$BREW_BIN" shellenv)"
+
+    log "Running brew bundle for $(basename "$file") (streaming output below)..."
+    # Stream brew bundle output live to the terminal (and the log) so every
+    # formula/cask install is visible as it happens. PIPESTATUS preserves
+    # brew's real exit code through the tee pipe.
+    local brew_rc
+    if [ -n "$DRY_RUN" ]; then
+        run "$BREW_BIN" bundle --file="$file"
+        brew_rc=$?
     else
-        printf "    ${RED}[ERROR] brew bundle reported issues for $(basename "$file"). Check $LOG_FILE${NC}\n"
+        "$BREW_BIN" bundle --file="$file" --verbose 2>&1 | tee -a "$LOG_FILE"
+        # Capture brew's real exit code immediately: any later test command
+        # (e.g. the `[ ... ]` below) would otherwise overwrite PIPESTATUS.
+        brew_rc=${PIPESTATUS[0]}
+    fi
+    if [ "$brew_rc" -eq 0 ]; then
+        INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "brewfile: $(basename "$file")")
+        log "[OK] Completed $(basename "$file")"
+    else
+        log "[ERROR] brew bundle reported issues for $(basename "$file"). Check $LOG_FILE"
     fi
 }
 
@@ -180,6 +227,7 @@ main() {
 
     ensure_sudo
 
+    log "Detecting existing Homebrew installation..."
     local BREW_PATH=""
     if command -v brew >/dev/null 2>&1; then
         BREW_PATH=$(command -v brew)
@@ -188,16 +236,18 @@ main() {
     elif [ -f "/usr/local/bin/brew" ]; then
         BREW_PATH="/usr/local/bin/brew"
     fi
+    [ -n "$BREW_PATH" ] && log "Found Homebrew at $BREW_PATH"
 
     if [ -z "$BREW_PATH" ]; then
         printf "    ${CYAN}Homebrew not found. Installing...${NC}\n"
         # Non-interactive brew install
         # We use a temporary script to capture output and handle potential non-zero exit without crashing the main script due to set -e
+        log "Downloading and running the Homebrew installer (output streams below)..."
         local INSTALL_CMD='NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-        if eval "$INSTALL_CMD" >> "$LOG_FILE" 2>&1; then
-            printf "    ${GREEN}Homebrew installation script finished successfully.${NC}\n"
+        if eval "$INSTALL_CMD" 2>&1 | tee -a "$LOG_FILE"; then
+            log "Homebrew installation script finished successfully."
         else
-            printf "    ${RED}Homebrew installation script failed or was interrupted. Check $LOG_FILE for details.${NC}\n"
+            log "Homebrew installation script failed or was interrupted. Check $LOG_FILE for details."
         fi
         
         # Detect where it was installed
@@ -215,7 +265,9 @@ main() {
     if [ -n "$BREW_PATH" ] && command -v brew >/dev/null 2>&1; then
         # Ensure shellenv is applied if we found it via path but it's not in current PATH
         eval "$($BREW_PATH shellenv)"
+        log "Installing common packages (Brewfile.common)..."
         install_brewfile "$SCRIPT_DIR/Brewfile.common"
+        log "Installing $BUNDLE_TYPE packages ($(basename "$BREWFILE"))..."
         install_brewfile "$BREWFILE"
     else
         printf "    ${RED}Homebrew installation failed or was not found. Skipping package installation.${NC}\n"
@@ -225,9 +277,10 @@ main() {
     CURRENT_STEP=$((CURRENT_STEP + 1))
     draw_progress_bar 1 1 "Creating configuration directories..."
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Creating configuration directories...${NC}\n"
-    mkdir -p "$HOME/.config"
-    mkdir -p "$HOME/Library/Application Support/com.mitchellh.ghostty"
-    mkdir -p "$HOME/.config/zed"
+    for d in "$HOME/.config" "$HOME/Library/Application Support/com.mitchellh.ghostty" "$HOME/.config/zed" "$HOME/.local/bin" "$HOME/bin"; do
+        log "Ensuring directory exists: $d"
+        mkdir -p "$d"
+    done
 
     # Step 3: Symbolic links
     CURRENT_STEP=$((CURRENT_STEP + 1))
@@ -275,13 +328,16 @@ main() {
         local IDEA_PLUGINS=("com.anthropic.claudecode" "com.github.copilot" "org.jetbrains.plugins.go")
         local total_idea=${#IDEA_PLUGINS[@]}
         local current_idea=0
+        log "Found IntelliJ IDEA at $FOUND_IDEA"
         for plugin in "${IDEA_PLUGINS[@]}"; do
             current_idea=$((current_idea + 1))
+            log "Installing IntelliJ plugin ($current_idea/$total_idea): $plugin..."
             draw_progress_bar $current_idea $total_idea "Installing IntelliJ plugin: $plugin..."
             if run "$FOUND_IDEA" installPlugins "$plugin" >> "$LOG_FILE" 2>&1; then
                 INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "intellij-plugin: $plugin")
+                log "Installed IntelliJ plugin: $plugin"
             else
-                printf "\n    ${RED}Failed to install IntelliJ plugin: $plugin. Check $LOG_FILE for details.${NC}\n" >> "$LOG_FILE"
+                log "Failed to install IntelliJ plugin: $plugin. Check $LOG_FILE for details."
             fi
         done
         printf "\n    ${GREEN}[OK] IntelliJ plugins installation triggered via $FOUND_IDEA${NC}\n"
@@ -297,6 +353,7 @@ main() {
     if [ -f "$ZSH_SNIPPET" ]; then
         if [ -f "$HOME/.zshrc" ]; then
             if [ ! -f "$HOME/.zshrc_pre_script_copy" ]; then
+                log "Backing up ~/.zshrc to ~/.zshrc_pre_script_copy"
                 run cp "$HOME/.zshrc" "$HOME/.zshrc_pre_script_copy"
                 printf "    ${GREEN}Backup created at ~/.zshrc_pre_script_copy${NC}\n"
             else
@@ -316,6 +373,7 @@ main() {
             if [ -n "$DRY_RUN" ]; then
                 printf "    ${YELLOW}DRY-RUN:${NC} append %s to ~/.zshrc\n" "$ZSH_SNIPPET"
             else
+                log "Appending dotfiles snippet to ~/.zshrc"
                 printf '\n# Added by dotfiles setup script\n' >> ~/.zshrc
                 cat "$ZSH_SNIPPET" >> ~/.zshrc
             fi
@@ -331,6 +389,7 @@ main() {
     if command -v python3 >/dev/null 2>&1; then
         local VENV_PATH="$HOME/.venv"
         if [ ! -d "$VENV_PATH" ]; then
+            log "Creating Python virtual environment at $VENV_PATH..."
             draw_progress_bar 1 1 "Creating virtual environment at $VENV_PATH..."
             if run python3 -m venv "$VENV_PATH" >> "$LOG_FILE" 2>&1; then
                 printf "\n    ${GREEN}[OK] Virtual environment created at $VENV_PATH${NC}\n"
@@ -349,6 +408,7 @@ main() {
     CURRENT_STEP=$((CURRENT_STEP + 1))
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Configuring Git...${NC}\n"
     draw_progress_bar 1 1 "Setting up .gitconfig..."
+    log "Applying global git config (delta pager, diff options)..."
     run git config --global core.pager delta
     run git config --global interactive.diffFilter "delta --color-only"
     run git config --global delta.navigate true

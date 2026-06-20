@@ -13,6 +13,12 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
+# Running output: print a timestamped line for every action so the user can
+# follow exactly what the uninstaller is doing in real time (also in the log).
+log() {
+    printf "${CYAN}[%s]${NC} %s\n" "$(date +%H:%M:%S)" "$*"
+}
+
 # Progress bar function
 draw_progress_bar() {
     local current=$1
@@ -68,7 +74,9 @@ uninstall_all_brew() {
         return
     fi
 
-    ensure_sudo
+    # Target the user's ~/Applications so cask removal never triggers a per-app
+    # sudo/password prompt (apps in /Applications require admin rights to delete).
+    export HOMEBREW_CASK_OPTS="--appdir=$HOME/Applications"
 
     local formulas=() casks=()
     local formulas_raw casks_raw
@@ -85,26 +93,42 @@ EOF
     local total_items=$(( ${#formulas[@]} + ${#casks[@]} ))
     local current_item=0
 
+    log "Found ${#formulas[@]} formulae and ${#casks[@]} casks to remove."
+
     for formula in "${formulas[@]}"; do
         current_item=$((current_item + 1))
+        log "Removing formula ($current_item/$total_items): $formula..."
         draw_progress_bar $current_item $total_items "Removing $formula..."
         if brew remove --force "$formula" --ignore-dependencies >> "$LOG_FILE" 2>&1; then
             UNINSTALLED_PACKAGES=("${UNINSTALLED_PACKAGES[@]}" "brew: $formula")
         else
-            printf "\n    ${RED}Error removing $formula. Check $LOG_FILE for details.${NC}\n" >> "$LOG_FILE"
+            log "Error removing $formula. Check $LOG_FILE for details."
         fi
     done
 
     for cask in "${casks[@]}"; do
         current_item=$((current_item + 1))
+        log "Removing cask ($current_item/$total_items): $cask..."
         draw_progress_bar $current_item $total_items "Removing $cask..."
         if brew remove --force --cask "$cask" --ignore-dependencies >> "$LOG_FILE" 2>&1; then
             UNINSTALLED_PACKAGES=("${UNINSTALLED_PACKAGES[@]}" "cask: $cask")
         else
-            printf "\n    ${RED}Error removing $cask. Check $LOG_FILE for details.${NC}\n" >> "$LOG_FILE"
+            log "Error removing $cask. Check $LOG_FILE for details."
         fi
     done
 
+    # Now that all packages/applications have been removed, drop any
+    # leftover unused dependencies before clearing the cache.
+    log "Removing unused dependencies (brew autoremove)..."
+    printf "\n    ${RED}Running brew autoremove...${NC}\n"
+    draw_progress_bar 1 1 "Brew autoremove..."
+    if brew autoremove >> "$LOG_FILE" 2>&1; then
+        printf "\n    ${GREEN}[OK] Homebrew autoremove complete${NC}\n"
+    else
+        printf "\n    ${YELLOW}Homebrew autoremove reported some issues. Check $LOG_FILE.${NC}\n" >> "$LOG_FILE"
+    fi
+
+    log "Cleaning up Homebrew cache (brew cleanup --prune=all)..."
     printf "\n    ${RED}Cleaning up cache...${NC}\n"
     draw_progress_bar 1 1 "Brew cleanup..."
     if brew cleanup --prune=all >> "$LOG_FILE" 2>&1; then
@@ -129,18 +153,13 @@ uninstall_homebrew_itself() {
     fi
 
     printf "\n  ${YELLOW}[WARNING] This will UNINSTALL Homebrew itself from your system.${NC}\n"
-    printf "  Type ${BOLD}UNINSTALL${NC} to confirm: "
-    read -r confirm
-    if [[ "$confirm" != "UNINSTALL" ]]; then
-        printf "  ${CYAN}Skipping Homebrew uninstallation.${NC}\n"
-        return
-    fi
-
     printf "    ${CYAN}Uninstalling Homebrew...${NC}\n"
     ensure_sudo
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)" >> "$LOG_FILE" 2>&1
+    log "Running the official Homebrew uninstaller (output streams below)..."
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)" 2>&1 | tee -a "$LOG_FILE"
 
     # Final cleanup of common Homebrew directories if they still exist and are empty
+    log "Removing leftover Homebrew directories..."
     sudo rm -rf /usr/local/Homebrew /usr/local/Caskroom /usr/local/bin/brew /usr/local/share/doc/homebrew 2>/dev/null || true
     sudo rm -rf /opt/homebrew 2>/dev/null || true
 
@@ -192,6 +211,11 @@ main() {
 
     printf "${BOLD}${RED}Starting dotfiles uninstallation...${NC}\n\n"
 
+    # Acquire sudo once up front; a keep-alive then refreshes the timestamp for the
+    # rest of the run so the password is requested only once (cask removals from
+    # /Applications and the Homebrew uninstaller all reuse this cached session).
+    ensure_sudo
+
     UNINSTALLED_PACKAGES=()
 
     local TOTAL_STEPS=5
@@ -204,11 +228,13 @@ main() {
 
     BACKUP="$HOME/.zshrc_pre_script_copy"
     if [ -f "$BACKUP" ]; then
+        log "Restoring ~/.zshrc from backup $BACKUP"
         mv "$BACKUP" "$HOME/.zshrc"
         printf "    ${GREEN}Restored from backup.${NC}\n"
     else
         ZSH_SNIPPET="$SCRIPT_DIR/.config/zsh/snippet"
         if [ -f "$HOME/.zshrc" ]; then
+            log "No backup found; removing dotfiles snippet lines from ~/.zshrc"
             # Use a more portable sed approach for deleting lines
             sed -i '' "/# Added by dotfiles setup script/d" "$HOME/.zshrc"
             sed -i '' "/source \"${ZSH_SNIPPET//\//\\/}\"/d" "$HOME/.zshrc"
@@ -230,6 +256,7 @@ main() {
 
     for link in "${LINKS[@]}"; do
         if [ -L "$link" ]; then
+            log "Removing symlink: $link"
             if rm "$link"; then
                 printf "    ${GREEN}Removed link: $link${NC}\n" >> "$LOG_FILE"
             else
@@ -249,6 +276,7 @@ main() {
 
     for dir in "${DIRS[@]}"; do
         if [ -d "$dir" ]; then
+            log "Removing empty directory if possible: $dir"
             if rmdir "$dir" 2>/dev/null; then
                 printf "    ${GREEN}Removed empty directory: $dir${NC}\n" >> "$LOG_FILE"
             else
@@ -265,6 +293,7 @@ main() {
         local profile
         for profile in home work; do
             local GIT_PROFILE="$SCRIPT_DIR/.config/git/$profile.gitconfig"
+            log "Removing git include.path for profile: $profile"
             # Remove the include.path entry if it points at this repo's profile gitconfig
             git config --global --unset-all include.path "^$(printf '%s' "$GIT_PROFILE" | sed 's/[][\\.*^$/]/\\&/g')$" 2>/dev/null || true
         done
