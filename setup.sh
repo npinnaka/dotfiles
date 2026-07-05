@@ -386,10 +386,25 @@ main() {
     # Step 7: Python Virtual Environment
     CURRENT_STEP=$((CURRENT_STEP + 1))
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Setting up Python virtual environment...${NC}\n"
-    if command -v python3 >/dev/null 2>&1; then
-        local VENV_PATH="$HOME/.venv"
+    # Prefer `uv` (installed via Brewfile.common) to create the venv; fall back to
+    # the stdlib `python3 -m venv` if uv isn't available for some reason.
+    local VENV_PATH="$HOME/.venv"
+    if command -v uv >/dev/null 2>&1; then
         if [ ! -d "$VENV_PATH" ]; then
-            log "Creating Python virtual environment at $VENV_PATH..."
+            log "Creating Python virtual environment at $VENV_PATH using uv..."
+            draw_progress_bar 1 1 "Creating virtual environment at $VENV_PATH..."
+            if run uv venv "$VENV_PATH" >> "$LOG_FILE" 2>&1; then
+                printf "\n    ${GREEN}[OK] Virtual environment created at $VENV_PATH (uv)${NC}\n"
+                INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "python-venv: $VENV_PATH")
+            else
+                printf "\n    ${RED}Failed to create virtual environment with uv. Check $LOG_FILE for details.${NC}\n"
+            fi
+        else
+            printf "    ${CYAN}Virtual environment already exists at $VENV_PATH${NC}\n"
+        fi
+    elif command -v python3 >/dev/null 2>&1; then
+        if [ ! -d "$VENV_PATH" ]; then
+            log "uv not found; creating Python virtual environment at $VENV_PATH using python3..."
             draw_progress_bar 1 1 "Creating virtual environment at $VENV_PATH..."
             if run python3 -m venv "$VENV_PATH" >> "$LOG_FILE" 2>&1; then
                 printf "\n    ${GREEN}[OK] Virtual environment created at $VENV_PATH${NC}\n"
@@ -401,7 +416,7 @@ main() {
             printf "    ${CYAN}Virtual environment already exists at $VENV_PATH${NC}\n"
         fi
     else
-        printf "    ${YELLOW}python3 not found. Skipping virtual environment setup.${NC}\n"
+        printf "    ${YELLOW}Neither uv nor python3 found. Skipping virtual environment setup.${NC}\n"
     fi
 
     # Step 8: Git Configuration

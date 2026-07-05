@@ -15,6 +15,7 @@ cask "font-jetbrains-mono-nerd-font"
 # Languages & runtimes
 brew "go"
 brew "python"
+brew "uv"
 
 # Cloud / infra
 brew "awscli"
