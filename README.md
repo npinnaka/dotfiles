@@ -11,7 +11,7 @@ I use [Ghostty](https://ghostty.org/) as my primary terminal with a suite of mod
 You can clone this repository and run the setup script in one command:
 
 ```bash
-git clone https://github.com/yourusername/dotfiles.git ~/dotfiles && cd ~/dotfiles && ./setup.sh home
+git clone https://github.com/npinnaka/dotfiles.git ~/dotfiles && cd ~/dotfiles && ./setup.sh home
 ```
 
 ### Installation

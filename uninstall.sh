@@ -158,7 +158,8 @@ uninstall_homebrew_itself() {
     log "Running the official Homebrew uninstaller (output streams below)..."
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)" 2>&1 | tee -a "$LOG_FILE"
 
-    # Final cleanup of common Homebrew directories if they still exist and are empty
+    # Final cleanup: forcibly remove any Homebrew directories left behind by the
+    # official uninstaller, regardless of whether they are empty.
     log "Removing leftover Homebrew directories..."
     sudo rm -rf /usr/local/Homebrew /usr/local/Caskroom /usr/local/bin/brew /usr/local/share/doc/homebrew 2>/dev/null || true
     sudo rm -rf /opt/homebrew 2>/dev/null || true

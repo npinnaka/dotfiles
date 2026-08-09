@@ -44,7 +44,7 @@ brew bundle --file=Brewfile.home   # or Brewfile.work
 
 Packages are installed natively with `brew bundle --file=...` — there is no custom parser.
 
-### `setup.sh` flow (8 steps)
+### `setup.sh` flow (10 steps)
 
 1. Install Homebrew packages, casks, and fonts via `brew bundle` (`Brewfile.common` + the profile Brewfile)
 2. Create config directories (`~/.config`, Ghostty, Zed)
@@ -54,6 +54,8 @@ Packages are installed natively with `brew bundle --file=...` — there is no cu
 6. Append `<repo>/.config/zsh/snippet` to `~/.zshrc` (guarded by a grep marker; idempotent)
 7. Create a Python virtual environment at `~/.venv` (uses Python installed via Homebrew)
 8. Configure Git: global delta settings + per-profile identity via `git config --global include.path .config/git/<profile>.gitconfig`
+9. Initialize `rtk` globally via `rtk init -g` (skipped if `rtk` is not installed)
+10. Set up a Podman machine (init + start) and, on the `home` profile only, create a local Kubernetes cluster via `kind` (using the Podman provider)
 
 ### Symlink map (created by `setup.sh`)
 

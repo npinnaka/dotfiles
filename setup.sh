@@ -83,6 +83,25 @@ link_config() {
     printf "    ${GREEN}[OK] Linked $dst${NC}\n"
 }
 
+# Resolve the brew binary by absolute path: relying on `brew` being on PATH is
+# fragile (a prior `brew bundle`, or a partially failed install, can leave the
+# current shell without `brew` on PATH). Checks PATH first, then the standard
+# Apple Silicon / Intel install locations.
+find_brew() {
+    local bin
+    bin=$(command -v brew 2>/dev/null || true)
+    if [ -z "$bin" ]; then
+        local candidate
+        for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+            if [ -x "$candidate" ]; then
+                bin="$candidate"
+                break
+            fi
+        done
+    fi
+    printf '%s' "$bin"
+}
+
 # Install every entry of a Brewfile natively via `brew bundle`.
 install_brewfile() {
     local file=$1
@@ -95,22 +114,9 @@ install_brewfile() {
     mkdir -p "$HOME/Applications"
     export HOMEBREW_CASK_OPTS="--appdir=$HOME/Applications"
 
-    # Resolve the brew binary by absolute path and re-apply its shellenv for
-    # every bundle call. Relying on `brew` being on PATH is fragile: a prior
-    # `brew bundle` (or a partially failed install) can leave the current shell
-    # without `brew` on PATH, which produced "brew: command not found" on the
-    # second Brewfile. Looking it up here makes each call self-sufficient.
+    # Re-apply shellenv for every bundle call to make it self-sufficient.
     local BREW_BIN
-    BREW_BIN=$(command -v brew 2>/dev/null || true)
-    if [ -z "$BREW_BIN" ]; then
-        local candidate
-        for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
-            if [ -x "$candidate" ]; then
-                BREW_BIN="$candidate"
-                break
-            fi
-        done
-    fi
+    BREW_BIN=$(find_brew)
     if [ -z "$BREW_BIN" ]; then
         log "[ERROR] Homebrew not found; cannot install $(basename "$file")."
         return
@@ -228,19 +234,13 @@ main() {
     ensure_sudo
 
     log "Detecting existing Homebrew installation..."
-    local BREW_PATH=""
-    if command -v brew >/dev/null 2>&1; then
-        BREW_PATH=$(command -v brew)
-    elif [ -f "/opt/homebrew/bin/brew" ]; then
-        BREW_PATH="/opt/homebrew/bin/brew"
-    elif [ -f "/usr/local/bin/brew" ]; then
-        BREW_PATH="/usr/local/bin/brew"
-    fi
+    local BREW_PATH
+    BREW_PATH=$(find_brew)
     [ -n "$BREW_PATH" ] && log "Found Homebrew at $BREW_PATH"
 
     if [ -z "$BREW_PATH" ]; then
         printf "    ${CYAN}Homebrew not found. Installing...${NC}\n"
-        # Non-interactiive brew install
+        # Non-interactive brew install
         # We use a temporary script to capture output and handle potential non-zero exit without crashing the main script due to set -e
         log "Downloading and running the Homebrew installer (output streams below)..."
         local INSTALL_CMD='NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
@@ -367,9 +367,10 @@ main() {
     draw_progress_bar 1 1 "Updating ~/.zshrc..."
     printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Updating ~/.zshrc...${NC}\n"
     if [ -f "$ZSH_SNIPPET" ]; then
-        # Check if snippet content is already in .zshrc
-        # We look for a unique comment from the snippet
-        if ! grep -qF "# .zshrc snippets for Ghostty and Homebrew tools" ~/.zshrc 2>/dev/null; then
+        # Check if the snippet was already appended, using a guard marker that is
+        # independent of the snippet's own content (so editing the snippet later
+        # won't cause it to be re-appended on every run).
+        if ! grep -qF "# Added by dotfiles setup script" ~/.zshrc 2>/dev/null; then
             if [ -n "$DRY_RUN" ]; then
                 printf "    ${YELLOW}DRY-RUN:${NC} append %s to ~/.zshrc\n" "$ZSH_SNIPPET"
             else
@@ -405,7 +406,7 @@ main() {
     elif command -v python3 >/dev/null 2>&1; then
         if [ ! -d "$VENV_PATH" ]; then
             log "uv not found; creating Python virtual environment at $VENV_PATH using python3..."
-            draw_progress_bar 1 1 "Creating virtul environment at $VENV_PATH..."
+            draw_progress_bar 1 1 "Creating virtual environment at $VENV_PATH..."
             if run python3 -m venv "$VENV_PATH" >> "$LOG_FILE" 2>&1; then
                 printf "\n    ${GREEN}[OK] Virtual environment created at $VENV_PATH${NC}\n"
                 INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "python-venv: $VENV_PATH")
