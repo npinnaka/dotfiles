@@ -216,7 +216,7 @@ main() {
         exit 1
     fi
 
-    local TOTAL_STEPS=8
+    local TOTAL_STEPS=10
     local CURRENT_STEP=0
 
     printf "${BOLD}${BLUE}Starting dotfiles setup for ${CYAN}$BUNDLE_TYPE${BLUE}...${NC}\n\n"
@@ -240,7 +240,7 @@ main() {
 
     if [ -z "$BREW_PATH" ]; then
         printf "    ${CYAN}Homebrew not found. Installing...${NC}\n"
-        # Non-interactive brew install
+        # Non-interactiive brew install
         # We use a temporary script to capture output and handle potential non-zero exit without crashing the main script due to set -e
         log "Downloading and running the Homebrew installer (output streams below)..."
         local INSTALL_CMD='NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
@@ -405,7 +405,7 @@ main() {
     elif command -v python3 >/dev/null 2>&1; then
         if [ ! -d "$VENV_PATH" ]; then
             log "uv not found; creating Python virtual environment at $VENV_PATH using python3..."
-            draw_progress_bar 1 1 "Creating virtual environment at $VENV_PATH..."
+            draw_progress_bar 1 1 "Creating virtul environment at $VENV_PATH..."
             if run python3 -m venv "$VENV_PATH" >> "$LOG_FILE" 2>&1; then
                 printf "\n    ${GREEN}[OK] Virtual environment created at $VENV_PATH${NC}\n"
                 INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "python-venv: $VENV_PATH")
@@ -441,9 +441,71 @@ main() {
     fi
     printf "    ${GREEN}[OK] Git configuration updated.${NC}\n"
 
+    # Step 9: rtk global initialization
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Initializing rtk...${NC}\n"
+    draw_progress_bar 1 1 "Running rtk init -g..."
+    if command -v rtk >/dev/null 2>&1; then
+        log "Running rtk init -g..."
+        if run rtk init -g; then
+            printf "\n    ${GREEN}[OK] rtk initialized globally.${NC}\n"
+        else
+            printf "\n    ${YELLOW}rtk init -g reported an issue. Check $LOG_FILE for details.${NC}\n"
+        fi
+    else
+        printf "\n    ${YELLOW}rtk not found. Skipping rtk init -g.${NC}\n"
+    fi
+
+    # Step 10: Podman machine + (home-only) Kubernetes cluster
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    printf "\n  ${BLUE}[Step $CURRENT_STEP/$TOTAL_STEPS] Setting up Podman machine...${NC}\n"
+    draw_progress_bar 1 1 "Initializing Podman machine..."
+    if command -v podman >/dev/null 2>&1; then
+        # Initialize the podman machine only if one does not already exist.
+        if podman machine inspect >/dev/null 2>&1; then
+            printf "\n    ${CYAN}Podman machine already exists. Skipping init.${NC}\n"
+        else
+            log "Initializing podman machine..."
+            run podman machine init || log "Podman machine init reported an issue. Check $LOG_FILE for details."
+        fi
+        # Ensure the machine is running.
+        if podman machine inspect --format '{{.State}}' 2>/dev/null | grep -q running; then
+            printf "    ${CYAN}Podman machine already running.${NC}\n"
+        else
+            log "Starting podman machine..."
+            run podman machine start || log "Podman machine start reported an issue (it may already be running)."
+        fi
+
+        # Kubernetes cluster: create on the home profile only.
+        if [ "$BUNDLE_TYPE" = "home" ]; then
+            if command -v kind >/dev/null 2>&1; then
+                # If a cluster is already reachable (i.e. it works), leave it as-is.
+                if kubectl cluster-info >/dev/null 2>&1; then
+                    printf "    ${CYAN}Kubernetes cluster already reachable. Skipping creation.${NC}\n"
+                elif kind get clusters 2>/dev/null | grep -q .; then
+                    printf "    ${CYAN}kind cluster already exists. Skipping creation.${NC}\n"
+                else
+                    log "Creating Kubernetes cluster via kind (podman provider)..."
+                    if run env KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster; then
+                        INSTALLED_PACKAGES=("${INSTALLED_PACKAGES[@]}" "k8s-cluster: kind")
+                        printf "    ${GREEN}[OK] Kubernetes cluster created via kind.${NC}\n"
+                    else
+                        log "kind create cluster reported an issue. Check $LOG_FILE for details."
+                    fi
+                fi
+            else
+                printf "    ${YELLOW}kind not found. Skipping Kubernetes cluster creation.${NC}\n"
+            fi
+        else
+            printf "    ${CYAN}Profile is '$BUNDLE_TYPE'; skipping Kubernetes cluster creation.${NC}\n"
+        fi
+    else
+        printf "    ${YELLOW}podman not found. Skipping Podman machine setup.${NC}\n"
+    fi
+
     if [ ${#INSTALLED_PACKAGES[@]} -gt 0 ]; then
         printf "\n${BOLD}${BLUE}Package Installation Summary:${NC}\n"
-        for section in brewfile intellij-plugin python-venv; do
+        for section in brewfile intellij-plugin python-venv k8s-cluster; do
             local items=()
             for item in "${INSTALLED_PACKAGES[@]}"; do
                 [[ "${item%%:*}" == "$section" ]] && items=("${items[@]}" "$item")

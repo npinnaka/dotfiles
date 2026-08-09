@@ -66,6 +66,13 @@ if command -v delta &> /dev/null; then
   export GIT_PAGER="delta"
 fi
 
+# kubernetes-cli (kubectl) completions and alias
+if command -v kubectl &> /dev/null; then
+  source <(kubectl completion zsh)
+  alias k="kubectl"
+  compdef k=kubectl
+fi
+
 # zsh-syntax-highlighting (must be last)
 if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
   source "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"

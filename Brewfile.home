@@ -9,3 +9,6 @@ cask "google-chrome"
 # (installed via setup.sh's IntelliJ plugin step / JetBrains Toolbox), so it is
 # intentionally not listed here.
 cask "rectangle"
+
+# CLI tools
+brew "kind"

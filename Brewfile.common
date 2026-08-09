@@ -3,11 +3,11 @@
 
 # Apps (casks)
 cask "bruno"
-cask "docker-desktop"
+cask "podman-desktop"
 cask "ghostty"
 cask "github"
 cask "jetbrains-toolbox"
-cask "zed"
+cask "lapce"
 
 # Fonts
 cask "font-jetbrains-mono-nerd-font"
@@ -19,7 +19,11 @@ brew "uv"
 
 # Cloud / infra
 brew "awscli"
+brew "kind"
+brew "kubernetes-cli"
 brew "opentofu"
+brew "podman"
+brew "podman-compose"
 brew "protobuf"
 
 # Shell plugins
@@ -44,3 +48,4 @@ brew "ripgrep"
 brew "tree"
 brew "yazi"
 brew "zoxide"
+brew "rtk"
