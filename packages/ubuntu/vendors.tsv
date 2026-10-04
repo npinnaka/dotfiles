@@ -1,0 +1,8 @@
+# id	arch	package	key-url	primary-fingerprint	repository	suite	components
+# Reviewed 2026-10-04 against official keys and signed InRelease metadata.
+# Brave currently signs with DBF1..., not the newer unused keys in its key bundle.
+# Chrome stable now publishes both amd64 and arm64; pgAdmin Resolute publishes amd64 only.
+brave	all	brave-browser	https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg	DBF1A116C220B8C7164F98230686B78420038257	https://brave-browser-apt-release.s3.brave.com	stable	main
+chrome	all	google-chrome-stable	https://dl.google.com/linux/linux_signing_key.pub	EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796	https://dl.google.com/linux/chrome/deb	stable	main
+corretto21	all	java-21-amazon-corretto-jdk	https://apt.corretto.aws/corretto.key	6DC3636DAE534049C8B94623A122542AB04F24E3	https://apt.corretto.aws	stable	main
+pgadmin4	amd64	pgadmin4-desktop	https://www.pgadmin.org/static/packages_pgadmin_org.pub	E8697E2EEF76C02D3A6332778881B2A8210976F2	https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/resolute	pgadmin4	main

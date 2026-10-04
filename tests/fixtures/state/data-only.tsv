@@ -1,0 +1,2 @@
+dotfiles-state	1
+config	literal	$(touch "$DOTFILES_TEST_HOME/evaluated")	`touch "$DOTFILES_TEST_HOME/backticks"`

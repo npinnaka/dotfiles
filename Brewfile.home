@@ -1,14 +1,13 @@
 # Home-only dependencies (installed after Brewfile.common for the `home` profile)
 
-# Browsers
-cask "brave-browser"
-cask "google-chrome"
+if ENV.fetch("DOTFILES_GUI", "desktop") == "desktop"
+  # Browsers
+  cask "brave-browser"
+  cask "google-chrome"
 
-# Apps
-# Note: "junie" is not a Homebrew cask. JetBrains Junie ships as an IDE plugin
-# (installed via setup.sh's IntelliJ plugin step / JetBrains Toolbox), so it is
-# intentionally not listed here.
-cask "rectangle"
-
-# CLI tools
-brew "kind"
+  # Apps
+  # Note: "junie" is not a Homebrew cask. JetBrains Junie ships as an IDE plugin
+  # (installed via setup.sh's IntelliJ plugin step / JetBrains Toolbox), so it is
+  # intentionally not listed here.
+  cask "rectangle"
+end

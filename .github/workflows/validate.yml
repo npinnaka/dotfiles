@@ -1,0 +1,64 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS Bash 3.2 contract checks
+    runs-on: macos-15
+    env:
+      BATS_SHELL: /bin/bash
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test tools
+        run: brew install bats-core shellcheck
+      - name: Verify the selected Bash is 3.2
+        shell: /bin/bash {0}
+        run: '[[ "$BASH_VERSION" == 3.2.* ]]'
+      - name: Bash lint, zsh syntax and sandboxed contract tests
+        run: /bin/bash tests/validate.bash
+
+  ubuntu-container:
+    name: Ubuntu 26.04 ${{ matrix.arch }} container checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    container: ubuntu:26.04
+    env:
+      BATS_SHELL: /bin/bash
+      DEBIAN_FRONTEND: noninteractive
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install test tools inside the container
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends bash bats ca-certificates git python3 shellcheck ubuntu-keyring zsh
+      - uses: actions/checkout@v4
+      - name: Check the native container architecture and release
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          source lib/common.sh
+          source lib/platform.sh
+          detect_platform
+          test "$PLATFORM" = ubuntu
+          test "$ARCH" = "$EXPECTED_ARCH"
+      - name: Bash lint, zsh syntax and sandboxed contract tests
+        run: /bin/bash tests/validate.bash
+      - name: Resolve native APT inventory without installing it
+        run: /bin/bash tests/integration/apt-resolve.bash "${{ matrix.arch }}"

@@ -1,16 +1,18 @@
 # Common Brewfile shared across all environments
 # Installed via `brew bundle` for both the home and work profiles.
 
-# Apps (casks)
-cask "bruno"
-cask "podman-desktop"
-cask "ghostty"
-cask "github"
-cask "jetbrains-toolbox"
-cask "lapce"
+if ENV.fetch("DOTFILES_GUI", "desktop") == "desktop"
+  # Apps (casks)
+  cask "bruno"
+  cask "podman-desktop"
+  cask "ghostty"
+  cask "github"
+  cask "jetbrains-toolbox"
+  cask "lapce"
 
-# Fonts
-cask "font-jetbrains-mono-nerd-font"
+  # Fonts
+  cask "font-jetbrains-mono-nerd-font"
+end
 
 # Languages & runtimes
 brew "go"
@@ -41,6 +43,7 @@ brew "btop"
 brew "dust"
 brew "eza"
 brew "fzf"
+brew "gh"
 brew "git-delta"
 brew "jq"
 brew "lazygit"

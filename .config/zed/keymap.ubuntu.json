@@ -1,0 +1,18 @@
+[
+    {
+        "bindings": {
+            "shift shift": "file_finder::Toggle",
+            "ctrl-1": "workspace::ToggleLeftDock",
+            "ctrl-0": "workspace::ToggleBottomDock",
+            "ctrl-7": "outline::Toggle",
+            "ctrl-f12": "outline::Toggle",
+            "alt-f12": "terminal_panel::ToggleFocus",
+            "ctrl-d": "editor::DuplicateLine",
+            "ctrl-y": "editor::DeleteLine",
+            "ctrl-/": "editor::ToggleComments",
+            "shift-ctrl-enter": "editor::NewlineBefore",
+            "ctrl-e": "file_finder::Toggle",
+            "shift-ctrl-f": "pane::DeploySearch"
+        }
+    }
+]

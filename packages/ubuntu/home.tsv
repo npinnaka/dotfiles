@@ -1,0 +1,4 @@
+# id	scope	provider	package-or-recipe	requirement
+brave-browser	desktop	vendor	brave	optional
+google-chrome	desktop	vendor	chrome	optional
+rectangle	desktop	manual	Rectangle is macOS-only; no GNOME extension is installed as a substitute.	optional

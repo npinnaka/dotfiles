@@ -1,0 +1,14 @@
+# id	scope	provider	package-or-recipe	requirement
+claude-code	cli	release	claude-code	required
+corretto@21	cli	vendor	corretto21	required
+pgadmin4	desktop	vendor	pgadmin4	optional
+groovy	cli	apt	groovy	required
+jenv	cli	release	jenv	required
+node	cli	apt	nodejs	required
+npm	cli	apt	npm	required
+nodenv	cli	release	nodenv	required
+node-build	cli	release	node-build	required
+prettier	cli	release	prettier	required
+tsc	cli	apt	node-typescript	required
+vault	cli	release	vault	required
+yq	cli	release	yq	required

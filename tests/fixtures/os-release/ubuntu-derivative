@@ -1,0 +1,4 @@
+NAME="Not Ubuntu"
+ID=linuxmint
+ID_LIKE="ubuntu debian"
+VERSION_ID="26.04"

@@ -1,0 +1,40 @@
+# id	version	arch	url	sha256	format	member	command
+# Reviewed 2026-10-04. Explicit versions only; never execute a mutable installer.
+# uv: official *.sha256; kubectl: official kubectl.sha256; tofu: tofu_*_SHA256SUMS.
+# rtk: checksums.txt; yazi/yq: GitHub release asset SHA256 digests, cross-checked on downloaded archives.
+# Source archives: SHA256 of the exact tagged archive (a moved tag fails verification).
+# kubectl stays on 1.34 to match Ubuntu kind 0.30's default Kubernetes node minor.
+# Claude/Prettier: exact official npm tarballs, SHA-512 integrity checked before computing SHA-256.
+# Vault/Toolbox: official versioned SHA256SUMS / .sha256; desktop GitHub assets: release API digests.
+# Lapce and JetBrainsMono digests also checked against complete downloaded archives.
+uv	0.12.23	amd64	https://github.com/astral-sh/uv/releases/download/0.12.23/uv-x86_64-unknown-linux-gnu.tar.gz	9167d72b3319674b6303c4cbe071854bba13ebdf3d76b1a7cbdc175471fb66d6	tar.gz	uv-x86_64-unknown-linux-gnu/uv	uv
+uv	0.12.23	arm64	https://github.com/astral-sh/uv/releases/download/0.12.23/uv-aarch64-unknown-linux-gnu.tar.gz	6524bd338177ed50d035d39354e12545e993bbeba2ecbddf0480c5b3a81d313f	tar.gz	uv-aarch64-unknown-linux-gnu/uv	uv
+kubectl	v1.34.12	amd64	https://dl.k8s.io/release/v1.34.12/bin/linux/amd64/kubectl	90b7b9058ffeb5c10710bb1c73f541eaf426fb1b4e87df435db669de9a2564a2	binary	kubectl	kubectl
+kubectl	v1.34.12	arm64	https://dl.k8s.io/release/v1.34.12/bin/linux/arm64/kubectl	c819e3eb6a540d4f1e6aacaac85580bf0793bd1e7d05095a47407733ccf0cfb7	binary	kubectl	kubectl
+tofu	v1.13.1	amd64	https://github.com/opentofu/opentofu/releases/download/v1.13.1/tofu_1.13.1_linux_amd64.tar.gz	378ada19d4bc70c43732004e8159be771b23b9a5afdf059e5f8a2b3fa2c70a69	tar.gz	tofu	tofu
+tofu	v1.13.1	arm64	https://github.com/opentofu/opentofu/releases/download/v1.13.1/tofu_1.13.1_linux_arm64.tar.gz	9c1ef375aa1852db0b2888aa921b640c71f8140d4682aa4fec99378a64fa7dc3	tar.gz	tofu	tofu
+yazi	26.9.1	amd64	https://github.com/sxyazi/yazi/releases/download/v26.9.1/yazi-x86_64-unknown-linux-gnu.zip	a02fe91d3304294048c681f010f1100856872a4e98ecf6927328e888d40a6ad2	zip	yazi-x86_64-unknown-linux-gnu/yazi	yazi
+yazi	26.9.1	arm64	https://github.com/sxyazi/yazi/releases/download/v26.9.1/yazi-aarch64-unknown-linux-gnu.zip	02807f08d6b589b65b7516a4e259d83f5995d7a23bb12b3a155141385b370b3a	zip	yazi-aarch64-unknown-linux-gnu/yazi	yazi
+rtk	v0.51.0	amd64	https://github.com/rtk-ai/rtk/releases/download/v0.51.0/rtk-x86_64-unknown-linux-musl.tar.gz	5028d3b19a8f0990d30fec9fbb07e32782bc5698e618fb1861aad8a9ccba4eb5	tar.gz	rtk	rtk
+rtk	v0.51.0	arm64	https://github.com/rtk-ai/rtk/releases/download/v0.51.0/rtk-aarch64-unknown-linux-gnu.tar.gz	8d6d1aad9e69b42481eda7039507d1f7ee93698f87713cecd873d287c1931632	tar.gz	rtk	rtk
+yq	v4.54.1	amd64	https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64.tar.gz	e68a456f90c577af3fe4960184b3a3cf5c461e0348407c10f107da3a5fec8972	tar.gz	./yq_linux_amd64	yq
+yq	v4.54.1	arm64	https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_arm64.tar.gz	8c27f6e7476fb5acefb9352e3d30f6bc2dc93f1956eb92e8da727173fb7ec6d3	tar.gz	./yq_linux_arm64	yq
+jenv	0.6.0	all	https://github.com/jenv/jenv/archive/refs/tags/0.6.0.tar.gz	2897ac544007a2c651bb3c02985143c94f4e1234b9c3c6cb2e436442b17cbc74	tar.gz	jenv-0.6.0/bin/jenv	jenv
+nodenv	v1.6.2	all	https://github.com/nodenv/nodenv/archive/refs/tags/v1.6.2.tar.gz	4351a5fc642461d3bc92cf5228a558bf421e05c722b8827961d7f3a0e1cb5b50	tar.gz	nodenv-1.6.2/bin/nodenv	nodenv
+node-build	v5.4.56	all	https://github.com/nodenv/node-build/archive/refs/tags/v5.4.56.tar.gz	23ee5f1fb900437ac14d3f7012de861dc5ba86ccddb45526315a70dea5933f72	tar.gz	node-build-5.4.56	-
+zsh-autocomplete	26.08.04	all	https://github.com/marlonrichert/zsh-autocomplete/archive/refs/tags/26.08.04.tar.gz	57713aee4231e367b8947d715e8fa3cf2c274fb2f7c1e027e59005a2db34a914	tar.gz	zsh-autocomplete-26.08.04	-
+zsh-you-should-use	1.11.1	all	https://github.com/MichaelAquilina/zsh-you-should-use/archive/refs/tags/1.11.1.tar.gz	4d884aed12f1301f4620888e322c406c215b719e49385aa3088dc84c8ed383ed	tar.gz	zsh-you-should-use-1.11.1	-
+claude-code	2.1.289	amd64	https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-2.1.289.tgz	50a6eb433422febcfa7b7ac1e78ba795cdf79f1fe58f017fb1d9aeb9491b337d	tar.gz	package/claude	claude
+claude-code	2.1.289	arm64	https://registry.npmjs.org/@anthropic-ai/claude-code-linux-arm64/-/claude-code-linux-arm64-2.1.289.tgz	45ad1d2f955ebe14ffdbc651e86ca713063e63b616b41a184c93be89c28e5fb4	tar.gz	package/claude	claude
+prettier	3.9.9	all	https://registry.npmjs.org/prettier/-/prettier-3.9.9.tgz	c3b162d30c45126873cc6338a539383e92120a390d10de78f373f42c2045b338	tar.gz	package/bin/prettier.cjs	prettier
+vault	2.1.1	amd64	https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_amd64.zip	8aa90f9cea46f541fc7baa3d0ec692fc06afde9a248cc1f2dcac46a567c6f56b	zip	vault	vault
+vault	2.1.1	arm64	https://releases.hashicorp.com/vault/2.1.1/vault_2.1.1_linux_arm64.zip	c2c74e111ffbc83b3d29c6f0c0215a5e53d738c9fad045f7797bcdcde3156067	zip	vault	vault
+bruno	4.2.1	amd64	https://github.com/usebruno/bruno/releases/download/v4.2.1/bruno_4.2.1_amd64_linux.deb	7c36f0d7f15899bb48ab298d362da2741edc392c702faf13dd96ee12afd47a88	deb	-	bruno
+bruno	4.2.1	arm64	https://github.com/usebruno/bruno/releases/download/v4.2.1/bruno_4.2.1_arm64_linux.deb	ea55359c8cd4e48d20cae7c5f01ed3b6e1c6f242d1d8900c8eea2b64510c4893	deb	-	bruno
+podman-desktop	1.29.3	amd64	https://github.com/podman-desktop/podman-desktop/releases/download/v1.29.3/podman-desktop-1.29.3-x64.tar.gz	b2e9df4e1e6186c5da9b2608ef5e7e507da9c27ab2764e475b24df1ca2bc6b7a	tar.gz	podman-desktop-1.29.3-x64/podman-desktop	podman-desktop
+podman-desktop	1.29.3	arm64	https://github.com/podman-desktop/podman-desktop/releases/download/v1.29.3/podman-desktop-1.29.3-arm64.tar.gz	d874c2b7a97afcdff8504731ad5f860eae62be733aeeb64d097f432c81402e40	tar.gz	podman-desktop-1.29.3-arm64/podman-desktop	podman-desktop
+jetbrains-toolbox	3.8.1.88030	amd64	https://download.jetbrains.com/toolbox/jetbrains-toolbox-3.8.1.88030.tar.gz	25cbe2ad027f5a5749bf8d8ae7c2215a8665403cfe94ff5d05cd48b25daac345	tar.gz	jetbrains-toolbox-3.8.1.88030/bin/jetbrains-toolbox	jetbrains-toolbox
+jetbrains-toolbox	3.8.1.88030	arm64	https://download.jetbrains.com/toolbox/jetbrains-toolbox-3.8.1.88030-arm64.tar.gz	47dd2a112b2e169a072de01abc482a6a6341fcf8ce14acb62f7713963e78833e	tar.gz	jetbrains-toolbox-3.8.1.88030-arm64/bin/jetbrains-toolbox	jetbrains-toolbox
+lapce	0.4.6	amd64	https://github.com/lapce/lapce/releases/download/v0.4.6/lapce-linux-amd64.tar.gz	7a0945e6862bbe207316ba05ac5d634fc8a55069b61e4ec8989af632250d0984	tar.gz	Lapce/lapce	lapce
+lapce	0.4.6	arm64	https://github.com/lapce/lapce/releases/download/v0.4.6/lapce-linux-arm64.tar.gz	7a249eb41bc9f8ddbd94abb51ccdc1d233e33927e6eb9c63e103ea1d9c1530ec	tar.gz	Lapce/lapce	lapce
+nerd-font	3.5.1	all	https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz	04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf	tar.xz	.	-

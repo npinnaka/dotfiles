@@ -1,0 +1,6 @@
+# Ghostty Ubuntu Configuration
+
+config-file = common.conf
+
+# Window
+window-save-state = always

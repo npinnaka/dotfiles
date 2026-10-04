@@ -1,6 +1,6 @@
-# .zshrc snippets for Ghostty and Homebrew tools
+# .zshrc snippet managed by dotfiles
 
-# Homebrew setup and Path
+# Homebrew setup (macOS)
 if [[ -f /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 elif [[ -f /usr/local/bin/brew ]]; then
@@ -11,37 +11,47 @@ if command -v brew &> /dev/null; then
   BREW_PREFIX=$(brew --prefix)
 fi
 
-# Path
-# Ensure Homebrew paths are prioritized by being at the beginning,
-# but eval brew shellenv usually handles this.
-# We explicitly put user-local and homebrew bins first.
-#   $HOME/.local/bin : user-installed CLIs (pip --user, pipx, uv, npm --prefix, etc.)
+# PATH: Prioritize user-local bins, runtime paths, and platform defaults
+#   $HOME/.local/bin : user-installed CLIs (uv, pipx, local releases)
 #   $HOME/bin        : personal scripts
-#   $HOME/.docker/bin: Docker Desktop CLI plugins
-#   $HOME/go/bin     : Go-installed binaries (go install ...)
-#   $HOME/.cargo/bin : Rust/Cargo-installed binaries
-export PATH="$HOME/.local/bin:$HOME/bin:$HOME/.docker/bin:$HOME/go/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+#   $HOME/.docker/bin: Docker CLI plugins
+#   $HOME/go/bin     : Go-installed binaries
+#   $HOME/.cargo/bin : Rust/Cargo binaries
+export PATH="$HOME/.local/bin:$HOME/bin:$HOME/.docker/bin:$HOME/go/bin:$HOME/.cargo/bin${BREW_PREFIX:+:$BREW_PREFIX/bin:$BREW_PREFIX/sbin}:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
-# Set Homebrew Cask environment
-# Install casks into the user's ~/Applications so install/uninstall never needs sudo.
-export HOMEBREW_CASK_OPTS="--appdir=$HOME/Applications"
+# macOS Homebrew Cask options (apps in user directory)
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  export HOMEBREW_CASK_OPTS="--appdir=$HOME/Applications"
+fi
 
-#Set Anthropic TOKEN
-export ANTHROPIC_AUTH_TOKEN=""
+# Anthropic Auth Token (optional user setting)
+export ANTHROPIC_AUTH_TOKEN="${ANTHROPIC_AUTH_TOKEN:-}"
 
-# zsh-autocomplete (must be near top)
+# zsh-autocomplete (must be sourced near top)
 if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]]; then
   source "$BREW_PREFIX/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+elif [[ -f /usr/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh ]]; then
+  source /usr/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
 fi
 
 # zsh-autosuggestions
 if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
   source "$BREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+elif [[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+  source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
 fi
 
 # zsh-you-should-use
 if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh" ]]; then
   source "$BREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh"
+elif [[ -f /usr/share/zsh-you-should-use/you-should-use.plugin.zsh ]]; then
+  source /usr/share/zsh-you-should-use/you-should-use.plugin.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-you-should-use/you-should-use.plugin.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-you-should-use/you-should-use.plugin.zsh"
 fi
 
 # zoxide (smart cd)
@@ -51,17 +61,24 @@ fi
 
 # Starship prompt
 if command -v starship &> /dev/null; then
-  export STARSHIP_CONFIG="$HOME/.config/starship.toml"
+  export STARSHIP_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
   eval "$(starship init zsh)"
 fi
 
-# Modern replacements
-alias ls="eza --icons"
-alias ll="eza --icons -la"
-alias lt="eza --icons --tree --level=2"
-alias cat="bat"
+# Modern CLI replacements and aliases
+if command -v eza &> /dev/null; then
+  alias ls="eza --icons"
+  alias ll="eza --icons -la"
+  alias lt="eza --icons --tree --level=2"
+fi
 
-# git-delta (handled via git config, but good to have)
+if command -v bat &> /dev/null; then
+  alias cat="bat"
+elif command -v batcat &> /dev/null; then
+  alias cat="batcat"
+fi
+
+# git-delta pager
 if command -v delta &> /dev/null; then
   export GIT_PAGER="delta"
 fi
@@ -70,15 +87,19 @@ fi
 if command -v kubectl &> /dev/null; then
   source <(kubectl completion zsh)
   alias k="kubectl"
-  compdef k=kubectl
+  compdef k=kubectl 2>/dev/null || true
 fi
 
-# zsh-syntax-highlighting (must be last)
+# zsh-syntax-highlighting (must be sourced last)
 if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
   source "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+elif [[ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+  source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
 
-# Python Virtual Environment
+# Python Virtual Environment autoload
 if [[ -d "$HOME/.venv" && -f "$HOME/.venv/bin/activate" ]]; then
   source "$HOME/.venv/bin/activate"
 fi
