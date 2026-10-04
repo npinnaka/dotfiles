@@ -7,6 +7,9 @@ runtime_setup_python_venv() {
     local venv_path="$USER_HOME/.venv"
 
     if [ -d "$venv_path" ] && [ -f "$venv_path/bin/activate" ]; then
+        if [ "$DRY_RUN" != 1 ]; then
+            state_record venv "$venv_path" "created" - || return $?
+        fi
         report PRESENT "Python virtual environment at $venv_path"
         return 0
     fi
@@ -80,7 +83,8 @@ runtime_setup_containers() {
     fi
 
     if command -v kind >/dev/null 2>&1; then
-        if kind get clusters 2>/dev/null | grep -qx 'kind'; then
+        if KIND_EXPERIMENTAL_PROVIDER=podman kind get clusters 2>/dev/null | grep -qx 'kind'; then
+            state_record cluster "kind" "podman" - || return $?
             report PRESENT "Kind Kubernetes cluster 'kind'"
             return 0
         fi
@@ -94,14 +98,14 @@ runtime_setup_containers() {
 }
 
 runtime_purge() {
-    local key val extra
+    local key val
     if [ "$DRY_RUN" = 1 ]; then
         report PLANNED 'Purge recorded Python virtual environments and local Kubernetes clusters.'
         return 0
     fi
 
     # Purge recorded Python virtual environments
-    while IFS=$'\t' read -r key val extra; do
+    while IFS=$'\t' read -r key _; do
         [ -n "$key" ] || continue
         if [ -d "$key" ] || [ -f "$key" ] || [ -L "$key" ]; then
             run rm -rf "$key" || true
@@ -112,13 +116,31 @@ runtime_purge() {
 $(state_each venv)
 EOF
 
+    local default_venv="$USER_HOME/.venv"
+    if [ -d "$default_venv" ]; then
+        run rm -rf "$default_venv" || true
+        report INSTALLED "Removed Python virtual environment $default_venv"
+        state_forget venv "$default_venv" || true
+    fi
+
     # Purge recorded Kind clusters
-    while IFS=$'\t' read -r key val extra; do
+    while IFS=$'\t' read -r key val _; do
         [ -n "$key" ] || continue
         local cluster_name=$key
         local provider=$val
         if command -v kind >/dev/null 2>&1; then
-            if kind get clusters 2>/dev/null | grep -qx "$cluster_name"; then
+            local cluster_exists=0
+            if [ "$provider" = podman ]; then
+                if KIND_EXPERIMENTAL_PROVIDER=podman kind get clusters 2>/dev/null | grep -qx "$cluster_name"; then
+                    cluster_exists=1
+                fi
+            else
+                if kind get clusters 2>/dev/null | grep -qx "$cluster_name"; then
+                    cluster_exists=1
+                fi
+            fi
+
+            if [ "$cluster_exists" = 1 ]; then
                 if [ "$provider" = podman ]; then
                     KIND_EXPERIMENTAL_PROVIDER=podman run kind delete cluster --name "$cluster_name" || true
                 else
@@ -131,4 +153,12 @@ EOF
     done <<EOF
 $(state_each cluster)
 EOF
+
+    # Clean legacy/orphaned default kind cluster if it exists
+    if command -v kind >/dev/null 2>&1; then
+        if KIND_EXPERIMENTAL_PROVIDER=podman kind get clusters 2>/dev/null | grep -qx "kind"; then
+            KIND_EXPERIMENTAL_PROVIDER=podman run kind delete cluster --name "kind" || true
+            report INSTALLED "Deleted Kind cluster kind"
+        fi
+    fi
 }

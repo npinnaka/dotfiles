@@ -344,7 +344,24 @@ setup() {
         deb_dir=$BATS_TEST_TMPDIR/pkg
         mkdir -p "$deb_dir/DEBIAN"
         printf "Package: testpkg\nVersion: 1.0\nArchitecture: amd64\nMaintainer: test\nDescription: test\n" > "$deb_dir/DEBIAN/control"
-        dpkg-deb --build "$deb_dir" "$BATS_TEST_TMPDIR/archive" >/dev/null 2>&1
+        if command -v dpkg-deb >/dev/null 2>&1; then
+            dpkg-deb --build "$deb_dir" "$BATS_TEST_TMPDIR/archive" >/dev/null 2>&1
+        else
+            cat <<'\''EOF'\'' > "$BATS_TEST_TMPDIR/stub-bin/dpkg-deb"
+#!/bin/bash
+case "$1" in
+    --field)
+        case "$3" in
+            Package) printf "testpkg\n" ;;
+            Architecture) printf "amd64\n" ;;
+        esac
+        ;;
+    *) exit 0 ;;
+esac
+EOF
+            chmod +x "$BATS_TEST_TMPDIR/stub-bin/dpkg-deb"
+            touch "$BATS_TEST_TMPDIR/archive"
+        fi
         ubuntu_install_deb "$BATS_TEST_TMPDIR/archive"
         [ "$(state_value package apt:testpkg)" = owned ]
         grep -q "testpkg.deb" "$DOTFILES_APT_LOG"

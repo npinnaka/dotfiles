@@ -444,6 +444,7 @@ read_packages() {
 @test "macOS Ruby evaluates the actual Brewfile gates and retained package inventory" {
     [ "$(uname -s)" = Darwin ] || skip 'Optional Brewfile DSL check requires macOS Ruby'
     command -v ruby >/dev/null 2>&1 || skip 'Ruby is not available'
+    rm -f "$STUB_BIN/xcode-select"
     run ruby "$FIXTURES_DIR/macos-brewfiles.rb" "$PROJECT_ROOT"
     assert_status 0
     assert_no_preview_side_effects

@@ -134,7 +134,8 @@ EOF
             fi
             local tmp_zshrc
             tmp_zshrc=$(mktemp "$USER_HOME/.zshrc.tmp.XXXXXX") || return $?
-            awk -v start="$start_marker" -v end="$end_marker" -v repl="$managed_block" '
+            DOTFILES_START_MARKER=$start_marker DOTFILES_END_MARKER=$end_marker DOTFILES_MANAGED_BLOCK=$managed_block awk '
+                BEGIN { start = ENVIRON["DOTFILES_START_MARKER"]; end = ENVIRON["DOTFILES_END_MARKER"]; repl = ENVIRON["DOTFILES_MANAGED_BLOCK"] }
                 $0 == start { in_block=1; print repl; next }
                 $0 == end { in_block=0; next }
                 !in_block { print }
@@ -159,8 +160,9 @@ EOF
 
             local tmp_zshrc
             tmp_zshrc=$(mktemp "$USER_HOME/.zshrc.tmp.XXXXXX") || return $?
-            awk -v marker="# .zshrc snippets for Ghostty and Homebrew tools" -v repl="$managed_block" '
-                $0 ~ marker { seen=1; print repl; next }
+            DOTFILES_LEGACY_MARKER="# .zshrc snippets for Ghostty and Homebrew tools" DOTFILES_MANAGED_BLOCK=$managed_block awk '
+                BEGIN { marker = ENVIRON["DOTFILES_LEGACY_MARKER"]; repl = ENVIRON["DOTFILES_MANAGED_BLOCK"] }
+                index($0, marker) { seen=1; print repl; next }
                 !seen { print }
             ' "$zshrc" > "$tmp_zshrc" || { rm -f "$tmp_zshrc"; return 1; }
             chmod --reference="$zshrc" "$tmp_zshrc" 2>/dev/null || chmod 0644 "$tmp_zshrc"
@@ -295,7 +297,8 @@ EOF
     if [ -f "$zshrc" ] && grep -qF "$start_marker" "$zshrc"; then
         local tmp_zshrc
         tmp_zshrc=$(mktemp "$USER_HOME/.zshrc.tmp.XXXXXX") || return $?
-        awk -v start="$start_marker" -v end="$end_marker" '
+        DOTFILES_START_MARKER=$start_marker DOTFILES_END_MARKER=$end_marker awk '
+            BEGIN { start = ENVIRON["DOTFILES_START_MARKER"]; end = ENVIRON["DOTFILES_END_MARKER"] }
             $0 == start { in_block=1; next }
             $0 == end { in_block=0; next }
             !in_block { print }

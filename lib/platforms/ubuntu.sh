@@ -164,7 +164,20 @@ EOF
 }
 
 ubuntu_tree_checksum() {
-    (set -o pipefail; tar --sort=name --numeric-owner --owner=0 --group=0 -cf - -C "$1" . | sha256sum | awk '{print $1}')
+    (
+        set -o pipefail
+        if tar --version 2>&1 | grep -q 'GNU tar'; then
+            tar --sort=name --numeric-owner --owner=0 --group=0 -cf - -C "$1" . | (sha256sum 2>/dev/null || shasum -a 256) | awk '{print $1}'
+        else
+            find "$1" -mindepth 1 | LC_ALL=C sort | while IFS= read -r f; do
+                if [ -f "$f" ]; then
+                    (sha256sum "$f" 2>/dev/null || shasum -a 256 "$f")
+                elif [ -d "$f" ]; then
+                    printf 'dir %s\n' "$f"
+                fi
+            done | (sha256sum 2>/dev/null || shasum -a 256) | awk '{print $1}'
+        fi
+    )
 }
 
 ubuntu_asset_link() {

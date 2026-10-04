@@ -21,7 +21,7 @@ expected = {
   'common' => [
     %w[go python uv awscli kind kubernetes-cli opentofu podman podman-compose
        protobuf zsh-autocomplete zsh-autosuggestions zsh-syntax-highlighting
-       zsh-you-should-use starship bat btop dust eza fzf git-delta jq lazygit
+       zsh-you-should-use starship bat btop dust eza fzf gh git-delta jq lazygit
        ripgrep tree yazi zoxide rtk],
     %w[bruno podman-desktop ghostty github jetbrains-toolbox lapce
        font-jetbrains-mono-nerd-font]
