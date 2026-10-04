@@ -27,6 +27,8 @@ setup() {
     assert_output_matches 'usage'
     assert_output_contains --dry-run
     assert_output_contains --remove-packages
+    assert_output_contains --purge-runtimes
+    assert_output_contains --purge-all
     assert_no_preview_side_effects
 }
 

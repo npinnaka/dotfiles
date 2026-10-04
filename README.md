@@ -68,8 +68,10 @@ git clone https://github.com/npinnaka/dotfiles.git ~/dotfiles && cd ~/dotfiles
 By default, `./uninstall.sh` reverts dotfiles-managed symbolic links, removes the managed shell block from `~/.zshrc`, unsets Git identity includes, and restores any original configuration backups. Pre-existing system packages, package managers, virtual environments (`~/.venv`), IDEs, containers, and clusters are preserved.
 
 #### Flags:
-- `--dry-run`: Previews configuration and package removals without making changes.
+- `--dry-run`: Previews configuration, package, and runtime removals without making changes.
 - `--remove-packages`: Removes only newly installed, dotfiles-owned eligible packages tracked in the state journal.
+- `--purge-runtimes`: Removes dotfiles-provisioned developer runtimes (such as `~/.venv` and local Kind clusters).
+- `--purge-all, --purge`: Performs a complete uninstallation (reverts configs, removes dotfiles-owned packages, and purges developer runtimes).
 - `-h, --help`: Displays uninstaller usage.
 
 #### Examples:
@@ -82,6 +84,9 @@ By default, `./uninstall.sh` reverts dotfiles-managed symbolic links, removes th
 
 # Revert configurations and remove managed packages
 ./uninstall.sh --remove-packages
+
+# Complete teardown: configs, packages, and developer runtimes
+./uninstall.sh --purge-all
 ```
 
 ---

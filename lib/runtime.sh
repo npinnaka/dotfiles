@@ -92,3 +92,43 @@ runtime_setup_containers() {
         report SKIPPED "kind command not found; skipping cluster creation."
     fi
 }
+
+runtime_purge() {
+    local key val extra
+    if [ "$DRY_RUN" = 1 ]; then
+        report PLANNED 'Purge recorded Python virtual environments and local Kubernetes clusters.'
+        return 0
+    fi
+
+    # Purge recorded Python virtual environments
+    while IFS=$'\t' read -r key val extra; do
+        [ -n "$key" ] || continue
+        if [ -d "$key" ] || [ -f "$key" ] || [ -L "$key" ]; then
+            run rm -rf "$key" || true
+            report INSTALLED "Removed Python virtual environment $key"
+        fi
+        state_forget venv "$key" || true
+    done <<EOF
+$(state_each venv)
+EOF
+
+    # Purge recorded Kind clusters
+    while IFS=$'\t' read -r key val extra; do
+        [ -n "$key" ] || continue
+        local cluster_name=$key
+        local provider=$val
+        if command -v kind >/dev/null 2>&1; then
+            if kind get clusters 2>/dev/null | grep -qx "$cluster_name"; then
+                if [ "$provider" = podman ]; then
+                    KIND_EXPERIMENTAL_PROVIDER=podman run kind delete cluster --name "$cluster_name" || true
+                else
+                    run kind delete cluster --name "$cluster_name" || true
+                fi
+                report INSTALLED "Deleted Kind cluster $cluster_name"
+            fi
+        fi
+        state_forget cluster "$key" || true
+    done <<EOF
+$(state_each cluster)
+EOF
+}

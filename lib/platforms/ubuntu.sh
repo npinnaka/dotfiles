@@ -569,4 +569,46 @@ EOF
     done <<EOF
 $(state_each release)
 EOF
+
+    # Remove asset symlinks
+    while IFS=$'\t' read -r key val extra; do
+        [ -n "$key" ] || continue
+        if [ -L "$key" ]; then
+            rm -f "$key"
+            report INSTALLED "Removed asset symlink $key"
+        fi
+        state_forget asset-link "$key" || true
+    done <<EOF
+$(state_each asset-link)
+EOF
+
+    # Remove asset files
+    while IFS=$'\t' read -r key val extra; do
+        [ -n "$key" ] || continue
+        if [ -f "$key" ]; then
+            rm -f "$key"
+            report INSTALLED "Removed asset file $key"
+        fi
+        state_forget asset-file "$key" || true
+    done <<EOF
+$(state_each asset-file)
+EOF
+
+    # Remove system files (keyrings / source lists)
+    local system_files=()
+    while IFS=$'\t' read -r key val extra; do
+        [ -n "$key" ] || continue
+        if [ -f "$key" ]; then
+            system_files=("${system_files[@]}" "$key")
+        fi
+        state_forget system-file "$key" || true
+    done <<EOF
+$(state_each system-file)
+EOF
+    if [ "${#system_files[@]}" -gt 0 ]; then
+        run_privileged rm -f "${system_files[@]}" || true
+        for f in "${system_files[@]}"; do
+            report INSTALLED "Removed system file $f"
+        done
+    fi
 }

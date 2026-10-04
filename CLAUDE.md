@@ -41,6 +41,9 @@ Personal cross-platform dotfiles repository supporting **macOS** and **Ubuntu 26
 
 # Revert configurations and remove managed packages recorded in journal
 ./uninstall.sh --remove-packages
+
+# Complete teardown: configs, packages, and runtimes (~/.venv, Kind clusters)
+./uninstall.sh --purge-all
 ```
 
 ---
