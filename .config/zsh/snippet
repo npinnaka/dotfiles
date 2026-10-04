@@ -32,6 +32,8 @@ if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-autocomplete/zsh-autocompl
   source "$BREW_PREFIX/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
 elif [[ -f /usr/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh ]]; then
   source /usr/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
 elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]]; then
   source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
 fi
@@ -41,6 +43,8 @@ if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-autosuggestions/zsh-autosu
   source "$BREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
 elif [[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
   source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
   source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
 fi
@@ -50,6 +54,8 @@ if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-you-should-use/you-should-
   source "$BREW_PREFIX/share/zsh-you-should-use/you-should-use.plugin.zsh"
 elif [[ -f /usr/share/zsh-you-should-use/you-should-use.plugin.zsh ]]; then
   source /usr/share/zsh-you-should-use/you-should-use.plugin.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-you-should-use/you-should-use.plugin.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-you-should-use/you-should-use.plugin.zsh"
 elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-you-should-use/you-should-use.plugin.zsh" ]]; then
   source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-you-should-use/you-should-use.plugin.zsh"
 fi
@@ -95,6 +101,8 @@ if [[ -n "$BREW_PREFIX" && -f "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-sy
   source "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 elif [[ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
   source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+  source "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 elif [[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
   source "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
