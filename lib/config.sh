@@ -259,6 +259,7 @@ config_uninstall() {
             fi
         fi
         state_forget symlink "$target" || true
+        state_forget backup "$target" || true
     done <<EOF
 $(state_each symlink)
 EOF
@@ -314,10 +315,13 @@ EOF
             fi
             report INSTALLED "Removed dotfiles snippet from ~/.zshrc"
         fi
+        state_forget file "$zshrc" || true
+        state_forget backup "$zshrc" || true
     fi
 
     # 3. Revert Git identity includes
     run git config --global --unset-all include.path "$SCRIPT_DIR/.config/git/home.gitconfig" 2>/dev/null || true
     run git config --global --unset-all include.path "$SCRIPT_DIR/.config/git/work.gitconfig" 2>/dev/null || true
+    state_forget git-include "include.path" || true
     report INSTALLED "Removed dotfiles Git profile includes"
 }

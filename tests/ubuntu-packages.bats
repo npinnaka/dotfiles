@@ -307,6 +307,34 @@ setup() {
     assert_no_preview_side_effects
 }
 
+@test "an unrecorded existing release directory with valid member is adopted and activated" {
+    run_module platforms/ubuntu '
+        . "$SCRIPT_DIR/lib/state.sh"
+        init_paths setup
+        ARCH=amd64
+        ubuntu_release_available zsh-autocomplete
+        destination=$DATA_HOME/dotfiles/packages/zsh-autocomplete-$RELEASE_VERSION
+        mkdir -p "$destination/$RELEASE_MEMBER"
+        ubuntu_install_release zsh-autocomplete required
+        [ "$(state_value release zsh-autocomplete)" = "$RELEASE_VERSION" ]
+        [ "$(state_extra asset-tree "$destination")" = zsh-autocomplete ]
+    '
+    assert_status 0
+}
+
+@test "an unrecorded existing release directory missing member is rejected" {
+    run_module platforms/ubuntu '
+        . "$SCRIPT_DIR/lib/state.sh"
+        init_paths setup
+        ARCH=amd64
+        ubuntu_release_available zsh-autocomplete
+        destination=$DATA_HOME/dotfiles/packages/zsh-autocomplete-$RELEASE_VERSION
+        mkdir -p "$destination"
+        ubuntu_install_release zsh-autocomplete required
+    '
+    assert_failure
+}
+
 @test "ubuntu_install_deb ensures .deb suffix before invoking apt-get" {
     run_module platforms/ubuntu '
         . "$SCRIPT_DIR/lib/state.sh"

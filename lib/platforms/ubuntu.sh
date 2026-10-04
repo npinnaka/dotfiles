@@ -315,10 +315,20 @@ ubuntu_install_release_action() {
     state_init || return $?
     destination=$DATA_HOME/dotfiles/packages/$id-$RELEASE_VERSION
     if [ -e "$destination" ] || [ -L "$destination" ]; then
-        if [ ! -L "$destination" ] && [ "$(state_extra asset-tree "$destination")" = "$id" ] &&
-            [ "$(state_value asset-tree "$destination")" = "$(ubuntu_tree_checksum "$destination")" ]; then
-            ubuntu_activate_release "$id" "$destination"
-            return $?
+        if [ ! -L "$destination" ] && [ -d "$destination" ]; then
+            local recorded_checksum
+            recorded_checksum=$(state_value asset-tree "$destination")
+            if [ -n "$recorded_checksum" ]; then
+                if [ "$(state_extra asset-tree "$destination")" = "$id" ] &&
+                    [ "$recorded_checksum" = "$(ubuntu_tree_checksum "$destination")" ]; then
+                    ubuntu_activate_release "$id" "$destination"
+                    return $?
+                fi
+            elif [ -e "$destination/$RELEASE_MEMBER" ]; then
+                state_record asset-tree "$destination" "$(ubuntu_tree_checksum "$destination")" "$id" || return $?
+                ubuntu_activate_release "$id" "$destination"
+                return $?
+            fi
         fi
         fail "Preserving existing release directory $destination; review partial installation manually."
         return 1

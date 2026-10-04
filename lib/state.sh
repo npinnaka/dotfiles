@@ -74,8 +74,28 @@ state_each() {
 
 state_forget() { state_record "$1" "$2" '@deleted' '-'; }
 
+state_has_active_records() {
+    [ -f "$STATE_DIR/journal.tsv" ] || return 1
+    state_validate || return $?
+    awk -F '\t' '
+        NR > 1 {
+            deleted[$1 SUBSEP $2] = ($3 == "@deleted")
+        }
+        END {
+            for (key in deleted) {
+                if (!deleted[key]) exit 0
+            }
+            exit 1
+        }
+    ' "$STATE_DIR/journal.tsv"
+}
+
 state_cleanup() {
     if [ -f "$STATE_DIR/journal.tsv" ]; then
+        if state_has_active_records; then
+            report PRESENT 'State journal preserved for retained packages and runtimes'
+            return 0
+        fi
         run rm -f "$STATE_DIR/journal.tsv" || return $?
         report INSTALLED 'Removed dotfiles state journal'
     fi

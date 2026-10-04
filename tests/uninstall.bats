@@ -31,6 +31,25 @@ setup() {
     assert_status 0
 }
 
+@test "state_cleanup preserves journal when packages remain" {
+    allow_logging_tee
+    run_module config '
+        . "$SCRIPT_DIR/lib/state.sh"
+        init_paths setup
+        mkdir -p "$DOTFILES_TEST_HOME/src" "$CONFIG_HOME"
+        echo "target content" > "$DOTFILES_TEST_HOME/src/starship.toml"
+        config_link "$DOTFILES_TEST_HOME/src/starship.toml" "$CONFIG_HOME/starship.toml"
+        state_record package apt:curl owned eligible
+
+        config_uninstall
+        state_cleanup
+        [ -f "$STATE_DIR/journal.tsv" ]
+        [ "$(state_value package apt:curl)" = owned ]
+        [ -z "$(state_value symlink "$CONFIG_HOME/starship.toml")" ]
+    '
+    assert_status 0
+}
+
 @test "runtime_purge removes recorded virtual environments and kind clusters" {
     allow_logging_tee
     run_module runtime '
